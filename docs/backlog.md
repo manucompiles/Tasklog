@@ -22,7 +22,7 @@ What is currently being planned or built:
 
 | Plan file | Issue | Branch | Status |
 |-----------|-------|--------|--------|
-| - | - | - | - |
+| P92-sage-daily-note.md (pending) | #92 | feature/sage-daily-note-#92 | Planning |
 
 ---
 
@@ -117,6 +117,10 @@ Untracked ideas - not estimated, not prioritized, not committed to. Just things 
 - Hydramachine data safety + security basics (2026-09-08) - Sage's data is personal; treat it that way. (1) Automated backups so an HDD death never takes the journal: nightly sqlite snapshot of the Tasklog DB on-box + periodic off-box copy (PC when awake is the natural target; cadence/retention TBD). Later widen to Syncthing photos and Sage-written notes. (2) Security pass before any exposure beyond LAN+tailnet: app-level auth (API+frontend are readable by anyone on the home LAN today), GUI passwords everywhere, revisit COMPANION gate. (3) Immich someday-maybe as the pretty photo layer above Syncthing originals.
 
 - Companion rail dashboard (#87 follow-on, 2026-09-06) - the sticky right rail on /companion currently holds the history calendar + the cards panel; grow it into a small dashboard (day streaks, mood glance, pending-card badge on the tab, quick stats). Explicitly deferred by the user during the v4.0 build ("some kind of dashboard. later").
+
+- Sage morning mode (#92 follow-on, 2026-09-09) - the narrated morning ritual, keyboard off (Wispr Flow dictation is the native input). User dictates the morning as a story ("woke at 6, slept around 11, chores, free at the desk by 9:30, watched some YouTube, now planning the day"); Sage extracts without interrogating and: (1) helps shape priorities into the day's plan - fills the todays_plan buckets, deliberately left OUT of the v4.1 evening weave because plan is a morning artifact built from task ids; (2) proposes RETROACTIVE time entries from the narrative (sleep 11-6, morning routine, the YouTube stretch) as a `time` capture type confirming into the existing TimeEntries table (task-free entries + areas already exist since v3.2) - same trust-loop machinery as v4.1's mood/thought types, one more registered type + writer + card variant; (3) can start/stop real timers ("start the plan-of-day timer") via a timer tool. Morning persona behavior (asks about missing pieces or plan problems, never a checklist).
+
+- The empire game skin (someday, 2026-09-09) - the strategy-game lens over the life map, and it is DESIGNED, not just imagined: the user's Claude Design project "Life Map" reached Turn 5 with six live wireframe screens, cloned into docs/ideas/lifemap-designs/ (v2 Waves = current; mechanics.md + support.js + lifemap-data.js still to fetch - the canvas needs support.js to render). The loop: evening orders (pick 3 pieces under a move budget, rest explicitly waits), task = tower with HP measured in pomodoros, a wave = one 25-min pomodoro that lands for 1 HP, done fells the tower and advances the piece on its progression road; drift detection (tab-switch to a walled site / blur / idle) pauses the wave and asks "where did you go" - Research keeps full strength, Break pauses, Drifted lands at half - "nothing is lost either way" (trust-loop ethos applied to attention); time auto-logs to the task (waves ARE TimeEntries); morning recap shows "what moved" per area and calls out time-without-progress ("Leisure: 38h logged, 0 towers fallen - busy is not moving"); overgrowth at ~3 weeks untouched. Data seeds it needs someday: an effort-estimate (HP) column on tasks, and progression roads (goal-linked task chains). Sage is the steward. Scope guard still applies: never the lens before the data - but the substrate (time entries, plan buckets, areas) largely exists already.
 
 ### Time-tracking + "record of life" cluster (from #86 exploration, 2026-08-29)
 

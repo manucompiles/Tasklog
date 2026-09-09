@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=IM+Fell+English:ital@0;1&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #d7d9de; font-family: 'DM Sans', system-ui, sans-serif; color: #0f172a; }
+  a { color: #2563eb; text-decoration: none; } a:hover { color: #1d4ed8; }
+  svg text { user-select: none; }
+  @keyframes lm-pulse { 0% { opacity: .6; r: 11px; } 100% { opacity: 0; r: 20px; } }
+  @keyframes lm-pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</helmet>
+
+<section style="padding: 40px 40px 0; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font: 600 13px 'Space Grotesk'; letter-spacing: .08em; text-transform: uppercase; color: #475569;">Turn 4 · World map + marches (wireframe)</span><span style="font-size: 13px; color: #64748b;">No regions. Green world, your castle in the centre, task towers scattered around it. Flag colour = area. Cleared tasks are your outposts near home; targets sit further out. "March" launches a piece: it travels for an ETA, then lands as a win (tower taken, pawn advances) or a loss (returns home, tower keeps standing). Demo clock: 1 s = 1 h.</span></div>
+  <div style="display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; padding-top: 30px;">
+  <div id="4a" data-screen-label="4a world marches" style="position: relative; flex: none;">
+    <a href="#4a" style="position: absolute; top: -30px; left: 0; font: 600 12px 'Space Grotesk'; color: #0f172a; background: #fff; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px;">4a · World map, marches</a>
+    <div style="width: 1280px; height: 860px; background: #fafafa; border: 1px solid #d4d4d8; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; font-family: 'Space Grotesk', sans-serif; color: #27272a;">
+      <header style="height: 56px; flex: none; border-bottom: 1px dashed #a1a1aa; display: flex; align-items: center; padding: 0 24px; gap: 24px;">
+        <span style="font: 700 18px 'Space Grotesk';">Tasklog</span>
+        <nav style="display: flex; gap: 4px; font-size: 14px;"><span style="padding: 8px 12px; color: #71717a;">Tasks</span><span style="padding: 8px 12px; color: #71717a;">Time</span><span style="padding: 8px 12px; color: #71717a;">Journal</span><span style="padding: 8px 12px; border: 1px solid #27272a; border-radius: 8px; font-weight: 600;">Map</span></nav>
+        <div style="margin-left: auto; color: #71717a; font-size: 13px;">Fri 5 Sep · evening orders</div>
+      </header>
+      <div style="flex: 1; display: grid; grid-template-columns: minmax(0,1fr) 320px; min-height: 0;">
+        <div style="position: relative; min-height: 0; background: #edf1e6;">
+          <svg viewBox="0 -20 1040 660" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block;">
+            <defs>
+              <pattern id="g-grid" width="52" height="52" patternUnits="userSpaceOnUse"><path d="M52 0H0V52" fill="none" stroke="#27272a" stroke-width=".5" opacity=".08"></path></pattern>
+              <pattern id="g-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.5" height="8" fill="#a1a1aa"></rect></pattern>
+            </defs>
+            <rect x="0" y="-20" width="1040" height="660" fill="url(#g-grid)"></rect>
+            <sc-for list="{{ worldRings }}" as="rg" hint-placeholder-count="3"><g><ellipse cx="520" cy="310" rx="{{ rg.rx }}" ry="{{ rg.ry }}" fill="none" stroke="#27272a" stroke-width=".6" stroke-dasharray="2 6" opacity=".35"></ellipse>{{ rg.label }}</g></sc-for>
+            <sc-for list="{{ worldRegions }}" as="r" hint-placeholder-count="6">
+              <g>
+                <sc-for list="{{ r.projects }}" as="p" hint-placeholder-count="2">
+                  <g>
+                    <path d="{{ p.pathD }}" fill="none" stroke="#27272a" stroke-width="1" stroke-dasharray="2 5" opacity=".35"></path>
+                    <sc-for list="{{ p.tasks }}" as="t" hint-placeholder-count="4">
+                      <g style="transform: translate({{ t.x }}px, {{ t.y }}px);">
+                        <sc-if value="{{ t.isDone }}" hint-placeholder-val="{{ false }}"><rect x="-7" y="-7" width="14" height="14" style="fill: {{ r.flag }};" stroke="#27272a" stroke-width="1"></rect><path d="M0 -7 L0 -17 L9 -14 L0 -11Z" style="fill: {{ r.flag }};" stroke="#27272a" stroke-width=".8"></path></sc-if>
+                        <sc-if value="{{ t.isNow }}" hint-placeholder-val="{{ false }}"><rect x="-10" y="-10" width="20" height="20" fill="#fafafa" stroke="#27272a" stroke-width="1.6" stroke-dasharray="3 2"></rect><path d="M0 -10 L0 -22 L11 -18.5 L0 -15Z" style="fill: {{ r.flag }};" stroke="#27272a" stroke-width=".8"></path><sc-if value="{{ t.urgent }}" hint-placeholder-val="{{ false }}"><circle r="16" fill="none" stroke="#dc2626" stroke-width="1.5"></circle></sc-if></sc-if>
+                        <sc-if value="{{ t.isNext }}" hint-placeholder-val="{{ true }}"><rect x="-7" y="-7" width="14" height="14" fill="#fafafa" stroke="#71717a" stroke-width="1" stroke-dasharray="2 2"></rect><sc-if value="{{ r.isCold }}" hint-placeholder-val="{{ false }}"><rect x="-7" y="-7" width="14" height="14" fill="url(#g-hatch)"></rect></sc-if></sc-if>
+                      </g>
+                    </sc-for>
+                    {{ p.labelG }}
+                  </g>
+                </sc-for>
+                {{ r.labelG }}
+              </g>
+            </sc-for>
+            <sc-for list="{{ marches }}" as="m" hint-placeholder-count="0">
+              <g>
+                <line x1="520" y1="310" x2="{{ m.tx }}" y2="{{ m.ty }}" stroke="#27272a" stroke-width="1.5" stroke-dasharray="5 4"></line>
+                <g style="{{ m.markerStyle }}"><circle r="9" fill="#27272a"></circle><path d="M-4 3 L0 -5 L4 3Z" fill="#fafafa"></path></g>
+                {{ m.etaLabel }}
+              </g>
+            </sc-for>
+            <g transform="translate(520 310)"><circle r="46" fill="#fafafa" stroke="#27272a" stroke-width="2"></circle><rect x="-20" y="-20" width="40" height="40" fill="none" stroke="#27272a" stroke-width="1.5" stroke-dasharray="4 3"></rect><path d="M0 -20 L0 -36 L14 -31 L0 -26Z" fill="#27272a"></path>{{ homeLabel }}</g>
+            {{ legendG }}
+          </svg>
+        </div>
+        <aside style="border-left: 1px dashed #a1a1aa; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: hidden;">
+          <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 600 16px 'Space Grotesk';">Tonight's orders</span><span style="margin-left: auto; font-size: 12px; color: #71717a;">{{ budgetLabel }}</span></div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{ tray }}" as="t" hint-placeholder-count="5">
+              <div onClick="{{ t.pick }}" style="display: grid; grid-template-columns: 16px 1fr auto; gap: 10px; align-items: center; padding: 10px; border: 1px solid {{ t.borderW }}; border-radius: 6px; cursor: pointer; opacity: {{ t.opacity }};">
+                <span style="width: 14px; height: 14px; border: 1.5px solid #27272a; background: {{ t.bgW }};"></span>
+                <div style="min-width: 0;"><div style="font-size: 13.5px; font-weight: 600; line-height: 1.3;">{{ t.name }}</div><div style="font-size: 11.5px; color: #71717a;">{{ t.crumb }} · {{ t.etaText }}</div></div>
+                <sc-if value="{{ t.canMarch }}" hint-placeholder-val="{{ false }}"><button onClick="{{ t.march }}" style="font: 600 12px 'Space Grotesk'; padding: 6px 9px; border: 1.5px solid #27272a; background: #27272a; color: #fff; border-radius: 6px; cursor: pointer;">March</button></sc-if>
+                <sc-if value="{{ t.inFlight }}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; color: #71717a; border: 1px dashed #a1a1aa; padding: 5px 8px; border-radius: 6px;">en route</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <div style="border-top: 1px dashed #a1a1aa; padding-top: 12px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 600 14px 'Space Grotesk';">In flight</span><span style="margin-left: auto; font-size: 12px; color: #71717a;">{{ flightCount }}</span></div>
+            <sc-for list="{{ marches }}" as="m" hint-placeholder-count="0">
+              <div style="display: flex; flex-direction: column; gap: 4px; padding: 6px 0; border-bottom: 1px dotted #d4d4d8;">
+                <div style="display: flex; font-size: 12.5px;"><span style="font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ m.name }}</span><span style="margin-left: auto; color: #71717a; flex: none;">{{ m.eta }}</span></div>
+                <div style="height: 4px; background: #e4e4e7; border-radius: 2px; overflow: hidden;"><div style="height: 100%; background: #27272a; width: {{ m.pct }};"></div></div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noFlights }}" hint-placeholder-val="{{ true }}"><div style="font-size: 12px; color: #71717a;">Nothing marching. Pick a piece and send it.</div></sc-if>
+          </div>
+          <div style="border-top: 1px dashed #a1a1aa; padding-top: 12px; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: auto;">
+            <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 600 14px 'Space Grotesk';">Battle reports</span><span style="margin-left: auto; font-size: 12px; color: #71717a;">what landed</span></div>
+            <sc-for list="{{ landed }}" as="l" hint-placeholder-count="0">
+              <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px dotted #d4d4d8; font-size: 12.5px;">
+                <span style="font-weight: 700; color: {{ l.color }};">{{ l.tag }}</span>
+                <span style="min-width: 0;">{{ l.name }} <span style="color: #71717a;">{{ l.note }}</span></span>
+              </div>
+            </sc-for>
+            <sc-for list="{{ reports }}" as="l" hint-placeholder-count="3">
+              <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px dotted #d4d4d8; font-size: 12.5px;">
+                <span style="font-weight: 700; color: {{ l.color }};">{{ l.tag }}</span>
+                <span style="min-width: 0;">{{ l.name }} <span style="color: #71717a;">{{ l.note }}</span></span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top: auto; border: 1px dashed #a1a1aa; padding: 10px; font-size: 11.5px; color: #71717a; line-height: 1.5;">Sprite slots: home castle · outpost (yours) · target tower (flag) · far tower · overgrown tower · marching army marker</div>
+        </aside>
+      </div>
+    </div>
+  </div>
+  </div>
+</section>
+
+<section style="padding: 40px 40px 0; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font: 600 13px 'Space Grotesk'; letter-spacing: .08em; text-transform: uppercase; color: #475569;">Turn 3 · Hub wireframes</span><span style="font-size: 13px; color: #64748b;">Home tower in the centre holds today's 3 moves. Six sectors around it, one per area. Tracks leave the hub, fork per project, checkpoints march outward. Dashed boxes = sprite slots (tower states, ship, flag) for the CC0 pass. Your real names throughout.</span></div>
+  <div style="display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; padding-top: 30px;">
+  <div id="3a" data-screen-label="3a hub wireframe" style="position: relative; flex: none;">
+    <a href="#3a" style="position: absolute; top: -30px; left: 0; font: 600 12px 'Space Grotesk'; color: #0f172a; background: #fff; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px;">3a · Hub, desktop</a>
+    <div style="width: 1280px; height: 860px; background: #fafafa; border: 1px solid #d4d4d8; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; font-family: 'Space Grotesk', sans-serif; color: #27272a;">
+      <header style="height: 56px; flex: none; border-bottom: 1px dashed #a1a1aa; display: flex; align-items: center; padding: 0 24px; gap: 24px;">
+        <span style="font: 700 18px 'Space Grotesk';">Tasklog</span>
+        <nav style="display: flex; gap: 4px; font-size: 14px;"><span style="padding: 8px 12px; color: #71717a;">Tasks</span><span style="padding: 8px 12px; color: #71717a;">Time</span><span style="padding: 8px 12px; color: #71717a;">Journal</span><span style="padding: 8px 12px; border: 1px solid #27272a; border-radius: 8px; font-weight: 600;">Map</span></nav>
+        <div style="margin-left: auto; color: #71717a; font-size: 13px;">Fri 5 Sep · 3 moves left</div>
+      </header>
+      <div style="flex: 1; display: grid; grid-template-columns: minmax(0,1fr) 300px; min-height: 0;">
+        <div style="position: relative; min-height: 0;">
+          <svg viewBox="0 -70 1040 760" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block;">
+            <defs>
+              <pattern id="w-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.5" height="8" fill="#a1a1aa"></rect></pattern>
+            </defs>
+            <sc-for list="{{ hubRegions }}" as="r" hint-placeholder-count="6">
+              <g>
+                <path d="{{ r.path }}" style="fill: {{ r.wf }};" stroke="#71717a" stroke-width="1" stroke-dasharray="{{ r.wfDash }}"></path>
+                <sc-if value="{{ r.isCold }}" hint-placeholder-val="{{ false }}"><path d="{{ r.path }}" fill="url(#w-hatch)" opacity=".6"></path></sc-if>
+                <sc-if value="{{ r.isBusy }}" hint-placeholder-val="{{ false }}"><circle cx="{{ r.busyX }}" cy="{{ r.busyY }}" r="{{ r.busyR }}" fill="none" stroke="#27272a" stroke-width="1" stroke-dasharray="2 4"></circle>{{ r.busyLabel }}</sc-if>
+                <path d="{{ r.trunkD }}" fill="none" stroke="#27272a" stroke-width="2.5" stroke-linecap="round"></path>
+                <circle cx="{{ r.forkX }}" cy="{{ r.forkY }}" r="5" fill="#fafafa" stroke="#27272a" stroke-width="2"></circle>
+                {{ r.labelW }}
+                <sc-for list="{{ r.projects }}" as="p" hint-placeholder-count="2">
+                  <g>
+                    <path d="{{ p.pathD }}" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round"></path>
+                    <path d="{{ p.doneD }}" fill="none" stroke="#27272a" stroke-width="3" stroke-linecap="round"></path>
+                    <sc-for list="{{ p.tasks }}" as="t" hint-placeholder-count="4">
+                      <g style="transform: translate({{ t.x }}px, {{ t.y }}px);">
+                        <sc-if value="{{ t.isDone }}" hint-placeholder-val="{{ false }}"><rect x="-6" y="-6" width="12" height="12" fill="#27272a"></rect></sc-if>
+                        <sc-if value="{{ t.isNext }}" hint-placeholder-val="{{ true }}"><rect x="-6" y="-6" width="12" height="12" fill="#fafafa" stroke="#71717a" stroke-width="1.2" stroke-dasharray="2 2"></rect></sc-if>
+                      </g>
+                    </sc-for>
+                    <g style="transform: translate({{ p.pawn.x }}px, {{ p.pawn.y }}px); transition: transform .7s cubic-bezier(.2,.8,.2,1);">
+                      <rect x="-9" y="-9" width="18" height="18" fill="#fafafa" stroke="#27272a" stroke-width="1.5" stroke-dasharray="3 2"></rect>
+                      <sc-if value="{{ p.pawn.urgent }}" hint-placeholder-val="{{ false }}"><circle r="15" fill="none" stroke="#dc2626" stroke-width="1.5"></circle></sc-if>
+                      <sc-if value="{{ p.pawnPicked }}" hint-placeholder-val="{{ false }}"><circle r="15" fill="none" stroke="#27272a" stroke-width="1.5" style="animation: lm-pulse 1.8s ease-out infinite;"></circle></sc-if>
+                      {{ p.pawnLabelW }}
+                    </g>
+                    {{ p.labelW }}
+                  </g>
+                </sc-for>
+              </g>
+            </sc-for>
+            <circle cx="520" cy="310" r="78" fill="#fafafa" stroke="#27272a" stroke-width="2"></circle>
+            <rect x="490" y="262" width="60" height="60" fill="none" stroke="#27272a" stroke-width="1.5" stroke-dasharray="4 3"></rect>
+            {{ hubLabel }}
+            <sc-for list="{{ hubSlots }}" as="s" hint-placeholder-count="3"><g style="transform: translate({{ s.x }}px, {{ s.y }}px);"><circle r="8" style="fill: {{ s.fill }};" stroke="#27272a" stroke-width="1.5"></circle></g></sc-for>
+            {{ legendW }}
+          </svg>
+        </div>
+        <aside style="border-left: 1px dashed #a1a1aa; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-height: 0;">
+          <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 600 16px 'Space Grotesk';">Today · pick {{ budget }}</span><span style="margin-left: auto; font-size: 12px; color: #71717a;">{{ budgetLabel }}</span></div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{ tray }}" as="t" hint-placeholder-count="5">
+              <div onClick="{{ t.pick }}" style="display: grid; grid-template-columns: 16px 1fr auto; gap: 10px; align-items: center; padding: 10px; border: 1px solid {{ t.borderW }}; border-radius: 6px; cursor: pointer; opacity: {{ t.opacity }};">
+                <span style="width: 14px; height: 14px; border: 1.5px solid #27272a; background: {{ t.bgW }};"></span>
+                <div style="min-width: 0;"><div style="font-size: 13.5px; font-weight: 600; line-height: 1.3;">{{ t.name }}</div><div style="font-size: 11.5px; color: #71717a;">{{ t.crumb }}</div></div>
+                <sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}"><button onClick="{{ t.complete }}" style="font: 600 12px 'Space Grotesk'; padding: 6px 9px; border: 1.5px solid #27272a; background: #27272a; color: #fff; border-radius: 6px; cursor: pointer;">Move</button></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 0; font-size: 12px; color: #71717a; line-height: 1.5;">{{ budgetHint }}</p>
+          <div style="border-top: 1px dashed #a1a1aa; padding-top: 12px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 600 14px 'Space Grotesk';">What moved</span><span style="margin-left: auto; font-size: 12px; color: #71717a;">since yesterday</span></div>
+            <sc-for list="{{ moved }}" as="m" hint-placeholder-count="6">
+              <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px dotted #d4d4d8; font-size: 12.5px;">
+                <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ m.area }} <span style="color: #71717a;">{{ m.note }}</span></span>
+                <span style="font-weight: 600; min-width: 24px; text-align: right;">{{ m.steps }}</span>
+                <span style="color: #71717a; min-width: 40px; text-align: right;">{{ m.time }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="margin-top: 6px; font-size: 13px; font-weight: 600; animation: lm-pop .25s ease-out;">{{ toast }}</div></sc-if>
+          </div>
+          <div style="margin-top: auto; border: 1px dashed #a1a1aa; padding: 10px; font-size: 11.5px; color: #71717a; line-height: 1.5;">Sprite slots: hub tower · checkpoint tower (cleared / current / ahead / overgrown) · ship pawn · flag at fork · red banner for urgent</div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div id="3b" data-screen-label="3b hub phone wireframe" style="position: relative; flex: none;">
+    <a href="#3b" style="position: absolute; top: -30px; left: 0; font: 600 12px 'Space Grotesk'; color: #0f172a; background: #fff; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px;">3b · Hub, phone</a>
+    <div style="width: 390px; height: 844px; background: #fafafa; border: 1px solid #d4d4d8; border-radius: 40px; overflow: hidden; display: flex; flex-direction: column; font-family: 'Space Grotesk', sans-serif; color: #27272a;">
+      <div style="height: 50px; flex: none;"></div>
+      <div style="height: 44px; flex: none; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px dashed #a1a1aa;"><span style="font: 700 16px 'Space Grotesk';">Tasklog</span><span style="margin-left: auto; font-size: 13px; padding: 5px 8px; border: 1px solid #27272a; border-radius: 8px; font-weight: 600;">Map</span></div>
+      <div style="flex: 1; position: relative; min-height: 0;">
+        <svg viewBox="180 -30 680 680" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block;">
+          <sc-for list="{{ hubRegions }}" as="r" hint-placeholder-count="6">
+            <g>
+              <path d="{{ r.path }}" style="fill: {{ r.wf }};" stroke="#71717a" stroke-width="1.2"></path>
+              <sc-if value="{{ r.isCold }}" hint-placeholder-val="{{ false }}"><path d="{{ r.path }}" fill="url(#w-hatch)" opacity=".6"></path></sc-if>
+              <path d="{{ r.trunkD }}" fill="none" stroke="#27272a" stroke-width="3" stroke-linecap="round"></path>
+              {{ r.labelWPhone }}
+              <sc-for list="{{ r.projects }}" as="p" hint-placeholder-count="2">
+                <g>
+                  <path d="{{ p.pathD }}" fill="none" stroke="#a1a1aa" stroke-width="2.5" stroke-dasharray="4 6"></path>
+                  <path d="{{ p.doneD }}" fill="none" stroke="#27272a" stroke-width="3.5"></path>
+                  <sc-for list="{{ p.tasks }}" as="t" hint-placeholder-count="4"><rect x="{{ t.bx }}" y="{{ t.by }}" width="14" height="14" style="fill: {{ t.fillW }};" stroke="#71717a" stroke-width="1.2"></rect></sc-for>
+                  <g style="transform: translate({{ p.pawn.x }}px, {{ p.pawn.y }}px); transition: transform .7s cubic-bezier(.2,.8,.2,1);"><rect x="-11" y="-11" width="22" height="22" fill="#fafafa" stroke="#27272a" stroke-width="2" stroke-dasharray="3 2"></rect><sc-if value="{{ p.pawnPicked }}" hint-placeholder-val="{{ false }}"><circle r="18" fill="none" stroke="#27272a" stroke-width="2"></circle></sc-if></g>
+                </g>
+              </sc-for>
+            </g>
+          </sc-for>
+          <circle cx="520" cy="310" r="78" fill="#fafafa" stroke="#27272a" stroke-width="3"></circle>
+          <sc-for list="{{ hubSlots }}" as="s" hint-placeholder-count="3"><circle cx="{{ s.x }}" cy="{{ s.y }}" r="10" style="fill: {{ s.fill }};" stroke="#27272a" stroke-width="2"></circle></sc-for>
+          {{ hubLabelPhone }}
+        </svg>
+      </div>
+      <div style="flex: none; border-top: 1px dashed #a1a1aa; padding: 12px 16px 28px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: baseline;"><span style="font: 600 14px 'Space Grotesk';">Today's moves</span><span style="margin-left: auto; font-size: 12px; color: #71717a;">{{ budgetLabel }}</span></div>
+        <div style="display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;">
+          <sc-for list="{{ tray }}" as="t" hint-placeholder-count="5">
+            <div onClick="{{ t.pick }}" style="flex: none; width: 140px; border: 1px solid {{ t.borderW }}; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; opacity: {{ t.opacity }};">
+              <div style="display: flex; align-items: center;"><span style="width: 12px; height: 12px; border: 1.5px solid #27272a; background: {{ t.bgW }};"></span><sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}"><button onClick="{{ t.complete }}" style="margin-left: auto; font: 600 11px 'Space Grotesk'; padding: 4px 8px; border: 1.5px solid #27272a; background: #27272a; color: #fff; border-radius: 5px; cursor: pointer;">Move</button></sc-if></div>
+              <div style="font-size: 12.5px; font-weight: 600; line-height: 1.3; min-height: 32px;">{{ t.name }}</div>
+              <div style="font-size: 11px; color: #71717a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ t.crumb }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</section>
+
+<section style="padding: 40px 40px 0; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font: 600 13px 'Space Grotesk'; letter-spacing: .08em; text-transform: uppercase; color: #475569;">Turn 2 · Realms map background</span><span style="font-size: 13px; color: #64748b;">One continent, territories share jagged borders (no gaps), rivers, sea, grid. Foreground from <a href="#1b">1b</a> unchanged. Cold Leisure bleaches to wastes.</span></div>
+  <div id="2a" data-screen-label="2a realms" style="position: relative; flex: none; margin-top: 30px; width: 1280px;">
+    <a href="#2a" style="position: absolute; top: -30px; left: 0; font: 600 12px 'Space Grotesk'; color: #0f172a; background: #fff; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px;">2a · Realms</a>
+    <div style="width: 1280px; height: 860px; background: #f8fafc; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(15,23,42,.18); display: flex; flex-direction: column;">
+      <header style="height: 56px; flex: none; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; padding: 0 24px; gap: 24px;">
+        <span style="font: 700 18px 'Space Grotesk'; letter-spacing: -.01em;">Tasklog</span>
+        <nav style="display: flex; align-items: center; gap: 4px; font-size: 14px;">
+          <span style="padding: 8px 12px; border-radius: 8px; color: #64748b;">Tasks</span><span style="padding: 8px 12px; border-radius: 8px; color: #64748b;">Time</span><span style="padding: 8px 12px; border-radius: 8px; color: #64748b;">Journal</span><span style="padding: 8px 12px; border-radius: 8px; color: #0f172a; font-weight: 600; background: #f1f5f9;">Map</span>
+        </nav>
+        <div style="margin-left: auto; color: #64748b; font-size: 13px;">Fri 5 Sep</div>
+      </header>
+      <div style="flex: 1; display: grid; grid-template-columns: minmax(0,1fr) 330px; background: #a9b9b6; min-height: 0; overflow: hidden;">
+        <div style="position: relative; min-height: 0;">
+        <svg viewBox="-40 -40 1120 700" preserveAspectRatio="xMidYMid meet" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block;">
+          <defs>
+            <filter id="r-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="4" seed="7" result="n"></feTurbulence><feColorMatrix in="n" type="matrix" values="0 0 0 0 .2  0 0 0 0 .15  0 0 0 0 .08  0 0 0 .22 0"></feColorMatrix></filter>
+            <filter id="r-relief" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".04" numOctaves="3" seed="2" result="n"></feTurbulence><feColorMatrix in="n" type="matrix" values="0 0 0 0 .25  0 0 0 0 .18  0 0 0 0 .08  0 0 0 .18 0"></feColorMatrix></filter>
+            <pattern id="r-grid" width="150" height="150" patternUnits="userSpaceOnUse"><path d="M150 0H0V150" fill="none" stroke="#4d3d24" stroke-width=".8" opacity=".22"></path></pattern>
+            <pattern id="r-scrub" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M2 9q1.5-4 3-1M7 5q1.5-4 3-1" fill="none" stroke="#7a6a4c" stroke-width=".9" opacity=".55"></path></pattern>
+          </defs>
+          <rect x="-40" y="-40" width="1120" height="700" fill="#a9b9b6"></rect>
+          <rect x="-40" y="-40" width="1120" height="700" fill="url(#r-grid)"></rect>
+          <path d="{{ coastPath }}" fill="none" stroke="#6f8583" stroke-width="26" opacity=".35"></path>
+          <path d="{{ coastPath }}" fill="none" stroke="#5c716f" stroke-width="10" opacity=".45"></path>
+          <path d="{{ coastPath }}" fill="#e7dfcf"></path>
+          <sc-for list="{{ realms }}" as="r" hint-placeholder-count="6">
+            <g>
+              <path d="{{ r.path }}" style="fill: {{ r.realm }};" stroke="#3b2f1c" stroke-width="1.2" stroke-linejoin="round"></path>
+              <sc-if value="{{ r.isCold }}" hint-placeholder-val="{{ false }}"><path d="{{ r.path }}" fill="url(#r-scrub)"></path></sc-if>
+            </g>
+          </sc-for>
+          <path d="{{ coastPath }}" filter="url(#r-relief)"></path>
+          <path d="{{ coastPath }}" filter="url(#r-grain)"></path>
+          <sc-for list="{{ rivers }}" as="rv" hint-placeholder-count="0"><path d="{{ rv.d }}" fill="none" stroke="#3f9fb0" stroke-width="1.3" opacity=".8" stroke-linejoin="round"></path></sc-for>
+          <path d="{{ coastPath }}" fill="none" stroke="#3b2f1c" stroke-width="1.6" stroke-linejoin="round"></path>
+          <sc-for list="{{ realms }}" as="r" hint-placeholder-count="6">
+            <g>
+              <sc-if value="{{ r.isBusy }}" hint-placeholder-val="{{ false }}"><circle cx="{{ r.cx }}" cy="{{ r.cy }}" r="{{ r.busyR }}" fill="none" stroke="#8a3b2a" stroke-width=".8" stroke-dasharray="2 3" opacity=".6"></circle></sc-if>
+              {{ r.labelR }}
+              <sc-for list="{{ r.projects }}" as="p" hint-placeholder-count="2">
+                <g>
+                  <path d="{{ p.pathD }}" fill="none" stroke="#3b2f1c" stroke-width="1.3" stroke-dasharray="2 4" opacity=".75"></path>
+                  <path d="{{ p.doneD }}" fill="none" stroke="#f3ead3" stroke-width="5" stroke-linecap="round"></path>
+                  <path d="{{ p.doneD }}" fill="none" stroke="#3b2f1c" stroke-width="1.6" stroke-dasharray="7 3" stroke-linecap="round"></path>
+                  {{ p.labelB }}
+                  <sc-for list="{{ p.tasks }}" as="t" hint-placeholder-count="4">
+                    <g style="transform: translate({{ t.x }}px, {{ t.y }}px);">
+                      <sc-if value="{{ t.isDone }}" hint-placeholder-val="{{ false }}"><rect x="-4" y="-3" width="8" height="7" fill="#3b2f1c"></rect><path d="M-5.5 -3 L0 -8.5 L5.5 -3Z" fill="#3b2f1c"></path></sc-if>
+                      <sc-if value="{{ t.isNext }}" hint-placeholder-val="{{ true }}"><rect x="-4" y="-3" width="8" height="7" fill="#f3ead3" stroke="#3b2f1c" stroke-width="1.1"></rect><path d="M-5.5 -3 L0 -8.5 L5.5 -3Z" fill="none" stroke="#3b2f1c" stroke-width="1.1"></path></sc-if>
+                    </g>
+                  </sc-for>
+                  <g style="transform: translate({{ p.pawn.x }}px, {{ p.pawn.y }}px); transition: transform .7s cubic-bezier(.2,.8,.2,1);">
+                    <sc-if value="{{ r.isWarm }}" hint-placeholder-val="{{ false }}"><circle r="14" fill="none" stroke="#8a3b2a" stroke-width="1" style="animation: lm-pulse 1.8s ease-out infinite;"></circle></sc-if>
+                    <path d="M0 -12 L2.6 -4.6 L10 -3.2 L4.4 1.6 L5.8 9 L0 5.2 L-5.8 9 L-4.4 1.6 L-10 -3.2 L-2.6 -4.6Z" fill="#8a3b2a" stroke="#f3ead3" stroke-width="1.5"></path>
+                    {{ p.pawnLabelB }}
+                  </g>
+                </g>
+              </sc-for>
+            </g>
+          </sc-for>
+          <g transform="translate(1020 10)"><circle r="42" fill="none" stroke="#4d3d24" stroke-width=".8"></circle><circle r="30" fill="none" stroke="#4d3d24" stroke-width=".6" stroke-dasharray="1 3"></circle><path d="M0 -40 L5 0 L0 40 L-5 0Z" fill="#4d3d24"></path><path d="M-40 0 L0 -5 L40 0 L0 5Z" fill="#4d3d24" opacity=".6"></path><path d="M-26 -26 L0 -4 L26 26 L0 4Z M26 -26 L0 -4 L-26 26 L0 4Z" fill="#4d3d24" opacity=".3"></path>{{ compassN }}</g>
+          <g transform="translate(-24 610)">{{ captionR }}</g>
+        </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px; padding: 18px 20px 18px 0; min-height: 0; overflow: hidden;">
+        <div style="background: #f6efdd; border: 1px solid #4d3d24; box-shadow: inset 0 0 0 3px #f6efdd, inset 0 0 0 4px #4d3d24, 0 12px 30px -14px rgba(60,40,10,.5); padding: 16px 18px 12px; display: flex; flex-direction: column; gap: 8px; color: #2e2415;">
+          <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 20px 'IM Fell English'; letter-spacing: .1em; text-transform: uppercase;">Today's voyage</span><span style="margin-left: auto; font: italic 12px 'IM Fell English'; color: #6b5637;">{{ budgetLabel }}</span></div>
+          <div style="display: flex; gap: 5px;"><sc-for list="{{ budgetDots }}" as="d" hint-placeholder-count="3"><span style="width: 22px; height: 6px; background: {{ d.bgB }}; border: 1px solid #4d3d24;"></span></sc-for></div>
+          <div style="display: flex; flex-direction: column;">
+            <sc-for list="{{ tray }}" as="t" hint-placeholder-count="5">
+              <div onClick="{{ t.pick }}" style="display: grid; grid-template-columns: 14px 1fr auto; gap: 12px; align-items: center; padding: 9px 4px; cursor: pointer; border-bottom: 1px dotted #a08e6c; opacity: {{ t.opacity }};">
+                <span style="width: 12px; height: 12px; border: 1.2px solid #4d3d24; border-radius: 50%; background: {{ t.bgB }};"></span>
+                <div style="min-width: 0;"><div style="font: 14.5px 'IM Fell English'; line-height: 1.25;">{{ t.name }}</div><div style="font: italic 11.5px 'IM Fell English'; color: #6b5637;">{{ t.crumb }}</div></div>
+                <sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}"><button onClick="{{ t.complete }}" style="font: 12px 'IM Fell English'; letter-spacing: .08em; text-transform: uppercase; padding: 5px 9px; border: 1px solid #4d3d24; background: #4d3d24; color: #f6efdd; border-radius: 2px; cursor: pointer;">Sail</button></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 2px 0 0; font: italic 12px 'IM Fell English'; color: #6b5637; line-height: 1.5;">{{ budgetHint }}</p>
+        </div>
+        <div style="background: #f6efdd; border: 1px solid #4d3d24; box-shadow: inset 0 0 0 3px #f6efdd, inset 0 0 0 4px #4d3d24, 0 12px 30px -14px rgba(60,40,10,.5); padding: 14px 18px 10px; display: flex; flex-direction: column; gap: 4px; color: #2e2415;">
+          <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 17px 'IM Fell English'; letter-spacing: .1em; text-transform: uppercase;">Ship's log</span><span style="margin-left: auto; font: italic 11.5px 'IM Fell English'; color: #6b5637;">since yesterday</span></div>
+          <sc-for list="{{ moved }}" as="m" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px dotted #a08e6c;">
+              <div><div style="font: 13.5px 'IM Fell English';">{{ m.area }}</div><div style="font: italic 11px 'IM Fell English'; color: #6b5637;">{{ m.note }}</div></div>
+              <span style="font: 13px 'IM Fell English'; color: {{ m.stepColorB }}; min-width: 26px; text-align: right;">{{ m.steps }}</span>
+              <span style="font: italic 11px 'IM Fell English'; color: #6b5637; min-width: 44px; text-align: right;">{{ m.time }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="margin-top: 6px; font: italic 12.5px 'IM Fell English'; color: #8a3b2a; animation: lm-pop .25s ease-out;">{{ toast }}</div></sc-if>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 40px; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font: 600 13px 'Space Grotesk'; letter-spacing: .08em; text-transform: uppercase; color: #475569;">Turn 1 · Life Map (parked)</span><span style="font-size: 13px; color: #64748b;">Three directions, same coastline. Click a piece in the tray to pick it (budget 3), then "Move" to complete its checkpoint and watch the pawn advance.</span></div>
+  <div style="display: flex; gap: 40px; row-gap: 72px; align-items: flex-start; flex-wrap: wrap; padding-top: 30px;">
+
+  <!-- 1a · Clean & readable -->
+  <div id="1a" data-screen-label="1a clean" style="width: 1280px; flex: none; background: #f8fafc; border-radius: 12px; box-shadow: 0 20px 60px rgba(15,23,42,.18); position: relative;">
+    <a href="#1a" style="position: absolute; top: -30px; left: 0; font: 600 12px 'Space Grotesk'; color: #0f172a; background: #fff; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px;">1a · Clean &amp; readable</a>
+    <header style="height: 56px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; padding: 0 24px; gap: 24px;">
+      <span style="font: 700 18px 'Space Grotesk'; letter-spacing: -.01em;">Tasklog</span>
+      <nav style="display: flex; align-items: center; gap: 4px; font-size: 14px;">
+        <span style="padding: 8px 12px; border-radius: 8px; color: #64748b;">Tasks</span><span style="padding: 8px 12px; border-radius: 8px; color: #64748b;">Time</span><span style="padding: 8px 12px; border-radius: 8px; color: #64748b;">Journal</span><span style="padding: 8px 12px; border-radius: 8px; color: #0f172a; font-weight: 600; background: #f1f5f9;">Map</span>
+      </nav>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 14px; color: #64748b; font-size: 13px;"><span>Fri 5 Sep</span><span style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0; display: grid; place-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></span></div>
+    </header>
+    <div style="display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 20px; padding: 20px 24px 24px;">
+      <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px 20px 12px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <h1 style="margin: 0; font: 600 20px 'Space Grotesk';">Life map</h1>
+          <span style="font-size: 13px; color: #64748b;">Week 36 · 3 of 6 areas moving · Leisure cold for 21 days</span>
+          <div style="margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: #64748b; align-items: center;">
+            <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 18px; height: 3px; background: #0f172a; border-radius: 2px;"></span>cleared</span>
+            <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 18px; height: 0; border-top: 3px dashed #cbd5e1;"></span>ahead</span>
+            <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 14px; height: 14px; border-radius: 50%; border: 2px dashed #94a3b8;"></span>time spent</span>
+            <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 14px; height: 14px; border-radius: 4px; background: repeating-linear-gradient(45deg,#cbd5e1 0 2px,transparent 2px 5px); border: 1px dashed #94a3b8;"></span>overgrown</span>
+          </div>
+        </div>
+        <svg viewBox="0 0 1040 620" style="width: 100%; height: auto; display: block; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;">
+          <defs>
+            <pattern id="a-dots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#dbe1ea"></circle></pattern>
+            <pattern id="a-weeds" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="10" fill="#cbd5e1"></rect></pattern>
+          </defs>
+          <rect width="1040" height="620" fill="url(#a-dots)"></rect>
+          <sc-for list="{{ regions }}" as="r" hint-placeholder-count="6">
+            <g>
+              <path d="{{ r.path }}" style="fill: {{ r.c }}; stroke: {{ r.cs }}; stroke-width: 1.5;"></path>
+              <sc-if value="{{ r.isCold }}" hint-placeholder-val="{{ false }}"><path d="{{ r.path }}" fill="url(#a-weeds)" opacity=".7"></path><path d="{{ r.path }}" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4"></path></sc-if>
+              {{ r.labelA }}
+              <sc-for list="{{ r.projects }}" as="p" hint-placeholder-count="2">
+                <g>
+                  <path d="{{ p.pathD }}" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="6 5" stroke-linecap="round"></path>
+                  <path d="{{ p.doneD }}" fill="none" style="stroke: {{ r.ink }};" stroke-width="3" stroke-linecap="round"></path>
+                  {{ p.labelA }}
+                  <sc-for list="{{ p.tasks }}" as="t" hint-placeholder-count="4">
+                    <g>
+                      <sc-if value="{{ t.isDone }}" hint-placeholder-val="{{ false }}"><circle cx="{{ t.x }}" cy="{{ t.y }}" r="5" style="fill: {{ r.ink }};"></circle></sc-if>
+                      <sc-if value="{{ t.isNext }}" hint-placeholder-val="{{ true }}"><circle cx="{{ t.x }}" cy="{{ t.y }}" r="5" fill="#fff" stroke="#94a3b8" stroke-width="2"></circle></sc-if>
+                    </g>
+                  </sc-for>
+                  <circle cx="{{ p.pawn.x }}" cy="{{ p.pawn.y }}" r="{{ r.busyR }}" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 4" opacity=".8"></circle>
+                  <circle cx="{{ p.pawn.x }}" cy="{{ p.pawn.y }}" r="8" fill="#0f172a" stroke="#fff" stroke-width="3" style="transition: cx .7s cubic-bezier(.2,.8,.2,1), cy .7s cubic-bezier(.2,.8,.2,1);"></circle>
+                  {{ p.pawnLabelA }}
+                </g>
+              </sc-for>
+            </g>
+          </sc-for>
+        </svg>
+      </div>
+      <aside style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px 18px 14px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h2 style="margin: 0; font: 600 16px 'Space Grotesk';">Today</h2>
+            <span style="font-size: 12px; color: #64748b;">pick {{ budget }} pieces</span>
+            <div style="margin-left: auto; display: flex; gap: 5px;"><sc-for list="{{ budgetDots }}" as="d" hint-placeholder-count="3"><span style="width: 10px; height: 10px; border-radius: 50%; background: {{ d.bg }}; border: 1.5px solid #0f172a;"></span></sc-for></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{ tray }}" as="t" hint-placeholder-count="5">
+              <div onClick="{{ t.pick }}" style="display: grid; grid-template-columns: 4px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 10px; cursor: pointer; border: 1px solid {{ t.border }}; background: {{ t.bg }}; opacity: {{ t.opacity }};">
+                <span style="width: 4px; height: 100%; min-height: 32px; border-radius: 2px; background: {{ t.color }};"></span>
+                <div style="min-width: 0;"><div style="font-weight: 600; font-size: 14px; line-height: 1.3;">{{ t.name }}</div><div style="font-size: 12px; color: #64748b;">{{ t.crumb }}</div></div>
+                <sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}"><button onClick="{{ t.complete }}" style="font: 600 12px 'DM Sans'; padding: 7px 10px; border-radius: 8px; border: 0; background: #0f172a; color: #fff; cursor: pointer;">Move →</button></sc-if>
+                <sc-if value="{{ t.unpicked }}" hint-placeholder-val="{{ true }}"><span style="width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #cbd5e1;"></span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;">{{ budgetHint }}</p>
+        </div>
+        <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px 18px 14px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: baseline; gap: 10px;"><h2 style="margin: 0; font: 600 16px 'Space Grotesk';">What moved</h2><span style="font-size: 12px; color: #64748b;">since yesterday</span></div>
+          <sc-for list="{{ moved }}" as="m" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: 8px 1fr auto auto; gap: 10px; align-items: center; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f1f5f9;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ m.color }};"></span>
+              <span style="color: #0f172a;">{{ m.area }} <span style="color: #64748b;">{{ m.note }}</span></span>
+              <span style="font: 600 12px 'Space Grotesk'; color: {{ m.stepColor }}; min-width: 34px; text-align: right;">{{ m.steps }}</span>
+              <span style="font-size: 12px; color: #64748b; min-width: 42px; text-align: right;">{{ m.time }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: #f0fdf4; color: #166534; font-size: 13px; font-weight: 600; animation: lm-pop .25s ease-out;">{{ toast }}</div></sc-if>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- 1b · Parchment atlas -->
+  <div id="1b" style="display: flex; gap: 28px; align-items: flex-start; position: relative;">
+    <a href="#1b" style="position: absolute; top: -30px; left: 0; font: 600 12px 'Space Grotesk'; color: #0f172a; background: #fff; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px;">1b · Parchment atlas</a>
+    <div data-screen-label="1b atlas" style="width: 1280px; height: 860px; flex: none; background: #f8fafc; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(15,23,42,.18); display: flex; flex-direction: column;">
+      <header style="height: 56px; flex: none; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; padding: 0 24px; gap: 24px;">
+        <span style="font: 700 18px 'Space Grotesk'; letter-spacing: -.01em;">Tasklog</span>
+        <nav style="display: flex; align-items: center; gap: 4px; font-size: 14px;">
+          <span style="padding: 8px 12px; border-radius: 8px; color: #64748b;">Tasks</span><span style="padding: 8px 12px; border-radius: 8px; color: #64748b;">Time</span><span style="padding: 8px 12px; border-radius: 8px; color: #64748b;">Journal</span><span style="padding: 8px 12px; border-radius: 8px; color: #0f172a; font-weight: 600; background: #f1f5f9;">Map</span>
+        </nav>
+        <div style="margin-left: auto; color: #64748b; font-size: 13px;">Fri 5 Sep</div>
+      </header>
+      <div style="flex: 1; display: grid; grid-template-columns: minmax(0,1fr) 330px; background: #e3d8bd; min-height: 0; overflow: hidden;">
+        <div style="position: relative; min-height: 0;">
+        <svg viewBox="-40 -40 1120 700" preserveAspectRatio="xMidYMid meet" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block;">
+          <defs>
+            <filter id="b-paper" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="3" seed="4" result="n"></feTurbulence><feColorMatrix in="n" type="matrix" values="0 0 0 0 .35  0 0 0 0 .28  0 0 0 0 .17  0 0 0 .14 0"></feColorMatrix></filter>
+            <filter id="b-wobble"><feTurbulence type="fractalNoise" baseFrequency=".025" numOctaves="2" seed="9" result="w"></feTurbulence><feDisplacementMap in="SourceGraphic" in2="w" scale="5"></feDisplacementMap></filter>
+            <pattern id="b-scrub" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M2 8q1-3 2-0.5M6 4q1-3 2-0.5" fill="none" stroke="#4d3d24" stroke-width=".9" opacity=".6"></path></pattern>
+            <pattern id="b-sea" width="28" height="14" patternUnits="userSpaceOnUse"><path d="M0 7q7-5 14 0t14 0" fill="none" stroke="#7a6a4c" stroke-width=".7" opacity=".35"></path></pattern>
+          </defs>
+          <rect x="-40" y="-40" width="1120" height="700" fill="#e3d8bd"></rect>
+          <rect x="-40" y="-40" width="1120" height="700" fill="url(#b-sea)"></rect>
+          <rect x="-40" y="-40" width="1120" height="700" filter="url(#b-paper)"></rect>
+          <sc-for list="{{ regions }}" as="r" hint-placeholder-count="6">
+            <g>
+              <path d="{{ r.path }}" fill="none" stroke="#5b4a32" stroke-width="9" opacity=".13" filter="url(#b-wobble)"></path>
+              <path d="{{ r.path }}" style="fill: {{ r.a }};" stroke="#4d3d24" stroke-width="1.4" filter="url(#b-wobble)"></path>
+              <sc-if value="{{ r.isCold }}" hint-placeholder-val="{{ false }}"><path d="{{ r.path }}" fill="url(#b-scrub)"></path></sc-if>
+              <sc-if value="{{ r.isBusy }}" hint-placeholder-val="{{ false }}"><circle cx="{{ r.cx }}" cy="{{ r.cy }}" r="{{ r.busyR }}" fill="none" stroke="#8a3b2a" stroke-width=".8" stroke-dasharray="2 3" opacity=".6"></circle></sc-if>
+              {{ r.labelB }}
+              <sc-for list="{{ r.projects }}" as="p" hint-placeholder-count="2">
+                <g>
+                  <path d="{{ p.pathD }}" fill="none" stroke="#4d3d24" stroke-width="1.3" stroke-dasharray="2 4" opacity=".7"></path>
+                  <path d="{{ p.doneD }}" fill="none" stroke="#f3ead3" stroke-width="5" stroke-linecap="round"></path>
+                  <path d="{{ p.doneD }}" fill="none" stroke="#4d3d24" stroke-width="1.6" stroke-dasharray="7 3" stroke-linecap="round"></path>
+                  {{ p.labelB }}
+                  <sc-for list="{{ p.tasks }}" as="t" hint-placeholder-count="4">
+                    <g style="transform: translate({{ t.x }}px, {{ t.y }}px);">
+                      <sc-if value="{{ t.isDone }}" hint-placeholder-val="{{ false }}"><rect x="-4" y="-3" width="8" height="7" fill="#4d3d24"></rect><path d="M-5.5 -3 L0 -8.5 L5.5 -3Z" fill="#4d3d24"></path></sc-if>
+                      <sc-if value="{{ t.isNext }}" hint-placeholder-val="{{ true }}"><rect x="-4" y="-3" width="8" height="7" fill="#f3ead3" stroke="#4d3d24" stroke-width="1.1"></rect><path d="M-5.5 -3 L0 -8.5 L5.5 -3Z" fill="none" stroke="#4d3d24" stroke-width="1.1"></path></sc-if>
+                    </g>
+                  </sc-for>
+                  <g style="transform: translate({{ p.pawn.x }}px, {{ p.pawn.y }}px); transition: transform .7s cubic-bezier(.2,.8,.2,1);">
+                    <sc-if value="{{ r.isWarm }}" hint-placeholder-val="{{ false }}"><circle r="14" fill="none" stroke="#8a3b2a" stroke-width="1" style="animation: lm-pulse 1.8s ease-out infinite;"></circle></sc-if>
+                    <path d="M0 -12 L2.6 -4.6 L10 -3.2 L4.4 1.6 L5.8 9 L0 5.2 L-5.8 9 L-4.4 1.6 L-10 -3.2 L-2.6 -4.6Z" fill="#8a3b2a" stroke="#f3ead3" stroke-width="1.5"></path>
+                    {{ p.pawnLabelB }}
+                  </g>
+                </g>
+              </sc-for>
+            </g>
+          </sc-for>
+          <g transform="translate(1030 610)"><circle r="24" fill="none" stroke="#4d3d24" stroke-width=".8"></circle><path d="M0 -22 L4.5 0 L0 22 L-4.5 0Z" fill="#4d3d24"></path><path d="M-22 0 L0 -3.5 L22 0 L0 3.5Z" fill="#4d3d24" opacity=".5"></path>{{ compassN }}</g>
+          {{ captionB }}
+        </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px; padding: 18px 20px 18px 0; min-height: 0; overflow: hidden;">
+        <div style="background: #f6efdd; border: 1px solid #4d3d24; box-shadow: inset 0 0 0 3px #f6efdd, inset 0 0 0 4px #4d3d24, 0 12px 30px -14px rgba(60,40,10,.5); padding: 16px 18px 12px; display: flex; flex-direction: column; gap: 8px; color: #2e2415;">
+          <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 20px 'IM Fell English'; letter-spacing: .1em; text-transform: uppercase;">Today's voyage</span><span style="margin-left: auto; font: italic 12px 'IM Fell English'; color: #6b5637;">{{ budgetLabel }}</span></div>
+          <div style="display: flex; gap: 5px;"><sc-for list="{{ budgetDots }}" as="d" hint-placeholder-count="3"><span style="width: 22px; height: 6px; background: {{ d.bgB }}; border: 1px solid #4d3d24;"></span></sc-for></div>
+          <div style="display: flex; flex-direction: column;">
+            <sc-for list="{{ tray }}" as="t" hint-placeholder-count="5">
+              <div onClick="{{ t.pick }}" style="display: grid; grid-template-columns: 14px 1fr auto; gap: 12px; align-items: center; padding: 9px 4px; cursor: pointer; border-bottom: 1px dotted #a08e6c; opacity: {{ t.opacity }};">
+                <span style="width: 12px; height: 12px; border: 1.2px solid #4d3d24; border-radius: 50%; background: {{ t.bgB }};"></span>
+                <div style="min-width: 0;"><div style="font: 14.5px 'IM Fell English'; line-height: 1.25;">{{ t.name }}</div><div style="font: italic 11.5px 'IM Fell English'; color: #6b5637;">{{ t.crumb }}</div></div>
+                <sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}"><button onClick="{{ t.complete }}" style="font: 12px 'IM Fell English'; letter-spacing: .08em; text-transform: uppercase; padding: 5px 9px; border: 1px solid #4d3d24; background: #4d3d24; color: #f6efdd; border-radius: 2px; cursor: pointer;">Sail</button></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 2px 0 0; font: italic 12px 'IM Fell English'; color: #6b5637; line-height: 1.5;">{{ budgetHint }}</p>
+        </div>
+        <div style="background: #f6efdd; border: 1px solid #4d3d24; box-shadow: inset 0 0 0 3px #f6efdd, inset 0 0 0 4px #4d3d24, 0 12px 30px -14px rgba(60,40,10,.5); padding: 14px 18px 10px; display: flex; flex-direction: column; gap: 4px; color: #2e2415;">
+          <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 17px 'IM Fell English'; letter-spacing: .1em; text-transform: uppercase;">Ship's log</span><span style="margin-left: auto; font: italic 11.5px 'IM Fell English'; color: #6b5637;">since yesterday</span></div>
+          <sc-for list="{{ moved }}" as="m" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px dotted #a08e6c;">
+              <div><div style="font: 13.5px 'IM Fell English';">{{ m.area }}</div><div style="font: italic 11px 'IM Fell English'; color: #6b5637;">{{ m.note }}</div></div>
+              <span style="font: 13px 'IM Fell English'; color: {{ m.stepColorB }}; min-width: 26px; text-align: right;">{{ m.steps }}</span>
+              <span style="font: italic 11px 'IM Fell English'; color: #6b5637; min-width: 44px; text-align: right;">{{ m.time }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="margin-top: 6px; font: italic 12.5px 'IM Fell English'; color: #8a3b2a; animation: lm-pop .25s ease-out;">{{ toast }}</div></sc-if>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <div data-screen-label="1b atlas · phone" style="width: 390px; height: 844px; flex: none; background: #e3d8bd; border-radius: 40px; overflow: hidden; box-shadow: 0 0 0 1px rgba(15,23,42,.15), 0 20px 60px rgba(15,23,42,.25); display: flex; flex-direction: column; color: #2e2415; position: relative;">
+      <div style="height: 50px; flex: none; background: #fff;"></div>
+      <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e2e8f0; color: #0f172a;">
+        <span style="font: 700 16px 'Space Grotesk';">Tasklog</span>
+        <nav style="margin-left: auto; display: flex; gap: 2px; font-size: 13px;"><span style="padding: 6px 8px; color: #64748b;">Tasks</span><span style="padding: 6px 8px; color: #64748b;">Time</span><span style="padding: 6px 8px; color: #64748b;">Journal</span><span style="padding: 6px 8px; background: #f1f5f9; border-radius: 8px; font-weight: 600;">Map</span></nav>
+      </div>
+      <div style="padding: 14px 16px 4px; display: flex; align-items: baseline; gap: 10px;"><span style="font: 18px 'IM Fell English'; letter-spacing: .1em; text-transform: uppercase;">Today's voyage</span><span style="margin-left: auto; font: italic 12px 'IM Fell English'; color: #6b5637;">{{ budgetLabel }}</span></div>
+      <div style="display: flex; gap: 10px; padding: 6px 16px 14px; overflow-x: auto; scrollbar-width: none;">
+        <sc-for list="{{ tray }}" as="t" hint-placeholder-count="5">
+          <div onClick="{{ t.pick }}" style="flex: none; width: 150px; background: #f6efdd; border: 1px solid #4d3d24; box-shadow: inset 0 0 0 2px #f6efdd, inset 0 0 0 3px #4d3d24; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; opacity: {{ t.opacity }};">
+            <div style="display: flex; align-items: center;"><span style="width: 12px; height: 12px; border: 1.2px solid #4d3d24; border-radius: 50%; background: {{ t.bgB }};"></span><sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}"><button onClick="{{ t.complete }}" style="margin-left: auto; font: 11px 'IM Fell English'; letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border: 1px solid #4d3d24; background: #4d3d24; color: #f6efdd; border-radius: 2px; cursor: pointer;">Sail</button></sc-if></div>
+            <div style="font: 14px 'IM Fell English'; line-height: 1.25; min-height: 36px;">{{ t.name }}</div>
+            <div style="font: italic 11px 'IM Fell English'; color: #6b5637;">{{ t.crumb }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex: 1; position: relative; min-height: 0; border-top: 1px solid #4d3d24;">
+        <svg viewBox="0 0 1040 620" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block;">
+          <rect width="1040" height="620" fill="#e3d8bd"></rect>
+          <rect width="1040" height="620" fill="url(#b-sea)"></rect>
+          <sc-for list="{{ regions }}" as="r" hint-placeholder-count="6">
+            <g>
+              <path d="{{ r.path }}" style="fill: {{ r.a }};" stroke="#4d3d24" stroke-width="2.2"></path>
+              <sc-if value="{{ r.isCold }}" hint-placeholder-val="{{ false }}"><path d="{{ r.path }}" fill="url(#b-scrub)"></path></sc-if>
+              {{ r.labelBPhone }}
+              <sc-for list="{{ r.projects }}" as="p" hint-placeholder-count="2">
+                <g>
+                  <path d="{{ p.pathD }}" fill="none" stroke="#4d3d24" stroke-width="2.4" stroke-dasharray="3 6" opacity=".7"></path>
+                  <path d="{{ p.doneD }}" fill="none" stroke="#4d3d24" stroke-width="3.5" stroke-dasharray="10 4" stroke-linecap="round"></path>
+                  <sc-for list="{{ p.tasks }}" as="t" hint-placeholder-count="4"><circle cx="{{ t.x }}" cy="{{ t.y }}" r="7" style="fill: {{ t.fillB }};" stroke="#4d3d24" stroke-width="2"></circle></sc-for>
+                  <g style="transform: translate({{ p.pawn.x }}px, {{ p.pawn.y }}px); transition: transform .7s cubic-bezier(.2,.8,.2,1);"><path d="M0 -20 L4 -8 L16 -5.5 L7 2.5 L9 14 L0 8.5 L-9 14 L-7 2.5 L-16 -5.5 L-4 -8Z" fill="#8a3b2a" stroke="#f3ead3" stroke-width="2.5"></path></g>
+                </g>
+              </sc-for>
+            </g>
+          </sc-for>
+        </svg>
+        <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 28px; background: linear-gradient(transparent, #e3d8bd 45%); font: italic 12px 'IM Fell English'; color: #4d3d24; display: flex; justify-content: space-between;"><span>Pinch to travel the coast</span><span>{{ movedShort }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1c · Ink & lantern (dark) -->
+  <div id="1c" style="position: relative; flex: none;">
+    <a href="#1c" style="position: absolute; top: -30px; left: 0; font: 600 12px 'Space Grotesk'; color: #0f172a; background: #fff; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 6px;">1c · Ink &amp; lantern (dark)</a>
+  <div data-screen-label="1c ink" style="width: 1280px; height: 860px; background: #111; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.5); display: flex; flex-direction: column; color: #f1f1f1;">
+    <header style="height: 56px; flex: none; background: #1e1e1e; border-bottom: 1px solid #333; display: flex; align-items: center; padding: 0 24px; gap: 24px;">
+      <span style="font: 700 18px 'Space Grotesk'; letter-spacing: -.01em;">Tasklog</span>
+      <nav style="display: flex; align-items: center; gap: 4px; font-size: 14px;">
+        <span style="padding: 8px 12px; border-radius: 8px; color: #999;">Tasks</span><span style="padding: 8px 12px; border-radius: 8px; color: #999;">Time</span><span style="padding: 8px 12px; border-radius: 8px; color: #999;">Journal</span><span style="padding: 8px 12px; border-radius: 8px; color: #f1f1f1; font-weight: 600; background: #2a2a2a;">Map</span>
+      </nav>
+      <div style="margin-left: auto; color: #999; font-size: 13px;">Fri 5 Sep</div>
+    </header>
+    <div style="flex: 1; position: relative; min-height: 0; overflow: hidden; background: radial-gradient(ellipse at 30% 20%, #1b1a17, #0c0c0d 70%);">
+      <svg viewBox="0 0 1040 620" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block;">
+        <defs>
+          <filter id="c-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"></feGaussianBlur></filter>
+          <filter id="c-hand"><feTurbulence type="fractalNoise" baseFrequency=".03" numOctaves="2" seed="3" result="w"></feTurbulence><feDisplacementMap in="SourceGraphic" in2="w" scale="3"></feDisplacementMap></filter>
+          <pattern id="c-forest" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M3 12 L5.5 5 L8 12Z M9 9 L11 4 L13 9Z" fill="#2c3327" opacity=".9"></path></pattern>
+          <pattern id="c-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#fff" stroke-width=".5" opacity=".05"></path></pattern>
+        </defs>
+        <rect width="1040" height="620" fill="url(#c-grid)"></rect>
+        <sc-for list="{{ regions }}" as="r" hint-placeholder-count="6">
+          <g>
+            <sc-if value="{{ r.isWarm }}" hint-placeholder-val="{{ false }}"><path d="{{ r.path }}" style="fill: {{ r.g }};" opacity=".5" filter="url(#c-glow)"></path></sc-if>
+            <path d="{{ r.path }}" style="fill: {{ r.gf }}; stroke: {{ r.g }};" stroke-width="1.6" filter="url(#c-hand)"></path>
+            <sc-if value="{{ r.isCold }}" hint-placeholder-val="{{ false }}"><path d="{{ r.path }}" fill="url(#c-forest)"></path></sc-if>
+            <sc-if value="{{ r.isBusy }}" hint-placeholder-val="{{ false }}"><circle cx="{{ r.cx }}" cy="{{ r.cy }}" r="{{ r.busyR }}" fill="none" style="stroke: {{ r.g }};" stroke-width="1" stroke-dasharray="2 4" opacity=".7"></circle><circle cx="{{ r.cx }}" cy="{{ r.cy }}" r="{{ r.busyR2 }}" fill="none" style="stroke: {{ r.g }};" stroke-width=".7" stroke-dasharray="1 5" opacity=".4"></circle></sc-if>
+            {{ r.labelC }}
+            <sc-for list="{{ r.projects }}" as="p" hint-placeholder-count="2">
+              <g>
+                <path d="{{ p.pathD }}" fill="none" stroke="#5a5650" stroke-width="1.6" stroke-dasharray="3 5" stroke-linecap="round"></path>
+                <path d="{{ p.doneD }}" fill="none" style="stroke: {{ r.g }};" stroke-width="3" stroke-linecap="round" filter="url(#c-hand)"></path>
+                {{ p.labelC }}
+                <sc-for list="{{ p.tasks }}" as="t" hint-placeholder-count="4">
+                  <g style="transform: translate({{ t.x }}px, {{ t.y }}px);">
+                    <sc-if value="{{ t.isDone }}" hint-placeholder-val="{{ false }}"><circle r="4.5" style="fill: {{ r.g }};"></circle></sc-if>
+                    <sc-if value="{{ t.isNext }}" hint-placeholder-val="{{ true }}"><circle r="4.5" fill="#111" stroke="#6b6660" stroke-width="1.6"></circle></sc-if>
+                  </g>
+                </sc-for>
+                <g style="transform: translate({{ p.pawn.x }}px, {{ p.pawn.y }}px); transition: transform .7s cubic-bezier(.2,.8,.2,1);">
+                  <circle r="16" style="fill: {{ r.g }};" opacity=".35" filter="url(#c-glow)"></circle>
+                  <sc-if value="{{ r.isWarm }}" hint-placeholder-val="{{ false }}"><circle r="14" fill="none" style="stroke: {{ r.g }}; animation: lm-pulse 1.8s ease-out infinite;" stroke-width="1.2"></circle></sc-if>
+                  <path d="M-5 6 L5 6 L3.5 -1 L-3.5 -1Z M0 -9 a4 4 0 1 0 0.01 0" style="fill: {{ r.g }};" stroke="#111" stroke-width="1.2"></path>
+                  {{ p.pawnLabelC }}
+                </g>
+              </g>
+            </sc-for>
+          </g>
+        </sc-for>
+      </svg>
+      <div style="position: absolute; left: 20px; bottom: 20px; right: 20px; display: flex; align-items: flex-end; gap: 16px;">
+        <div style="flex: 1; background: rgba(30,30,30,.9); backdrop-filter: blur(10px); border: 1px solid #333; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px;"><span style="font: 700 20px 'Caveat'; color: #f1f1f1;">Today's moves</span><span style="font-size: 12px; color: #999;">{{ budgetLabel }}</span><div style="margin-left: auto; display: flex; gap: 5px;"><sc-for list="{{ budgetDots }}" as="d" hint-placeholder-count="3"><span style="width: 10px; height: 10px; border-radius: 50%; background: {{ d.bgC }}; border: 1.5px solid #f59e0b;"></span></sc-for></div></div>
+          <div style="display: flex; gap: 10px;">
+            <sc-for list="{{ tray }}" as="t" hint-placeholder-count="5">
+              <div onClick="{{ t.pick }}" style="flex: 1; min-width: 0; background: {{ t.bgC }}; border: 1px solid {{ t.borderC }}; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; opacity: {{ t.opacity }};">
+                <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{ t.g }}; box-shadow: 0 0 8px {{ t.g }};"></span><span style="font-size: 11px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ t.crumb }}</span></div>
+                <div style="font-size: 13.5px; font-weight: 600; line-height: 1.3; color: #f1f1f1; min-height: 34px;">{{ t.name }}</div>
+                <sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}"><button onClick="{{ t.complete }}" style="font: 600 12px 'DM Sans'; padding: 7px 10px; border-radius: 8px; border: 0; background: #f59e0b; color: #111; cursor: pointer;">Move →</button></sc-if>
+                <sc-if value="{{ t.unpicked }}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; color: #6b6660; padding: 7px 0;">tap to pick</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="width: 300px; flex: none; background: rgba(30,30,30,.9); backdrop-filter: blur(10px); border: 1px solid #333; border-radius: 14px; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font: 700 20px 'Caveat';">What moved</span><span style="font-size: 12px; color: #999;">since yesterday</span></div>
+          <sc-for list="{{ moved }}" as="m" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: 8px 1fr auto auto; gap: 10px; align-items: center; font-size: 12.5px; padding: 4px 0; border-bottom: 1px solid #2a2a2a;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ m.g }}; box-shadow: 0 0 6px {{ m.g }};"></span>
+              <span style="color: #e7e5e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ m.area }} <span style="color: #999;">{{ m.note }}</span></span>
+              <span style="font: 600 12px 'Space Grotesk'; color: {{ m.stepColorC }}; min-width: 26px; text-align: right;">{{ m.steps }}</span>
+              <span style="font-size: 11.5px; color: #999; min-width: 42px; text-align: right;">{{ m.time }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="margin-top: 4px; font: 600 15px 'Caveat'; color: #f59e0b; animation: lm-pop .25s ease-out;">{{ toast }}</div></sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;budget&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:3,&quot;min&quot;:1,&quot;max&quot;:6,&quot;step&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Focus&quot;}}">
+class Component extends DCLogic {
+  state = { mod: null, completed: new Set(), picked: new Set(['career:Upskilling:1', 'finance:Taxes:0', 'health:Gym:1']), toast: '', movedToday: [], marches: [], landed: [] };
+  componentDidMount() { import('./lifemap-data.js').then(mod => this.setState({ mod })); this._tick = setInterval(() => { if (this.state.marches.some(m => !m.done)) this.resolveMarches(); }, 200); }
+  componentWillUnmount() { clearInterval(this._tick); }
+  resolveMarches() {
+    const now = Date.now();
+    this.setState(s => {
+      let completed = s.completed, landed = s.landed, changed = false;
+      const marches = s.marches.map(m => { if (m.done || now - m.start < m.dur) return m; changed = true; const ok = (m.seed % 4) !== 1;
+        if (ok) { completed = new Set(completed); completed.add(m.id); }
+        landed = [{ tag: ok ? 'WIN' : 'LOSS', color: ok ? '#16a34a' : '#dc2626', name: m.name, note: ok ? `tower taken · ${m.crumb.split(' · ')[0]} +1` : 'pushed back · piece returned home' }, ...landed];
+        return { ...m, done: true }; });
+      return changed ? { marches, completed, landed } : { marches };
+    });
+  }
+  launch(t) { this.setState(s => ({ marches: [...s.marches, { id: t.id, name: t.name, crumb: t.crumb, start: Date.now(), dur: (t.dist || 3) * 1000 * 2, seed: t.id.length + t.name.length, tx: t.x, ty: t.y, done: false }] })); }
+  renderVals() {
+    const { mod, completed, picked, toast, movedToday } = this.state, budget = this.props.budget ?? 3;
+    const T = (attrs, txt) => React.createElement('text', attrs, txt);
+    const compassN = T({ y: -29, textAnchor: 'middle', style: { font: "11px 'IM Fell English'", fill: '#4d3d24' } }, 'N');
+    const captionB = T({ x: -24, y: 648, style: { font: "italic 11px 'IM Fell English'", fill: '#4d3d24' } }, 'Charted once · towns claimed as projects are added · coastlines never redrawn');
+    const captionR = React.createElement('g', null, T({ style: { font: "34px 'IM Fell English'", fill: '#8a3b2a', letterSpacing: '.02em' } }, 'Six Realms'), T({ y: 20, style: { font: "italic 12px 'IM Fell English'", fill: '#4d3d24' } }, 'Charted once · borders never redrawn · new projects claim new roads'));
+    if (!mod) return { regions: [], tray: [], moved: [], budget, budgetDots: [], budgetHint: '', hasToast: false, budgetLabel: '', movedShort: '', compassN, captionB, captionR, coastPath: '', rivers: [], realms: [], hubRegions: [], hubSlots: [], hubLabel: null, hubLabelPhone: null, legendW: null, worldRegions: [], worldRings: [], marches: [], flightCount: '', noFlights: true, landed: [], reports: [], homeLabel: null, legendG: null, toast: '' };
+    const REALM = { career: '#c9574a', finance: '#d9a13f', health: '#8b9c58', relationships: '#8fa4a8', leisure: '#e7dfcf', mind: '#7f9bb5' };
+    const cont = mod.buildMap(completed, 'continent');
+    const decorate = raw => raw.map(r => {
+      const cold = r.heat === 'cold', h = r.hue;
+      const statusMap = { warm: `moved today · ${r.hours}h`, steady: `${r.days}d ago · ${r.hours}h`, cooling: `slipping · ${r.days}d quiet`, cold: r.hours >= 6 ? `cold ${r.days}d · ${r.hours}h logged, 0 steps` : `cold · ${r.days} days untouched` };
+      return { ...r,
+        c: cold ? '#eef0f3' : `oklch(0.94 0.045 ${h})`, cs: cold ? '#cbd5e1' : `oklch(0.78 0.10 ${h})`, ink: cold ? '#94a3b8' : `oklch(0.42 0.14 ${h})`,
+        a: cold ? '#e4dcc4' : `oklch(0.86 0.06 ${h})`, as: cold ? '#a89c7c' : `oklch(0.52 0.09 ${h})`,
+        g: cold ? '#4b4b57' : `oklch(0.72 0.16 ${h})`, gf: cold ? 'rgba(80,80,96,.18)' : `oklch(0.45 0.09 ${h} / .28)`,
+        gt: cold ? '#8a867f' : `oklch(0.88 0.10 ${h})`, busyR2: (10 + r.hours * 2.2) * 1.4,
+        status: statusMap[r.heat], subY: r.labelY + 16, realm: REALM[r.id],
+        projects: r.projects.map(p => ({ ...p, tasks: p.tasks.map(t => ({ ...t, fillB: t.isDone ? '#4d3d24' : '#f3ead3' })), pawn: { ...p.pawn, ly: p.pawn.y + 22 } })) };
+    }).map(r => {
+      const status = r.status, subY = r.subY, mid = { textAnchor: 'middle' };
+      const two = (x, y1, y2, s1, s2, n, st) => React.createElement('g', null, T({ x, y: y1, ...mid, style: s1 }, n), T({ x, y: y2, ...mid, style: s2 }, st));
+      return { ...r,
+        labelA: two(r.cx, r.labelY, subY, { font: "600 16px 'Space Grotesk'", fill: r.ink }, { font: "500 11px 'DM Sans'", fill: '#64748b', letterSpacing: '.04em' }, r.name, status),
+        labelB: two(r.cx, r.labelY, subY, { font: "19px 'IM Fell English'", letterSpacing: '.16em', textTransform: 'uppercase', fill: r.as }, { font: "italic 11px 'IM Fell English'", fill: '#6b5637' }, r.name, status),
+        labelBPhone: T({ x: r.cx, y: r.labelY, ...mid, style: { font: "30px 'IM Fell English'", letterSpacing: '.14em', textTransform: 'uppercase', fill: r.as } }, r.name),
+        labelC: two(r.cx, r.labelY, subY, { font: "700 26px 'Caveat'", fill: r.gt }, { font: "500 13px 'Caveat'", fill: '#a8a29a' }, r.name, status),
+        projects: r.projects.map(p => ({ ...p,
+          labelA: T({ x: p.labelX, y: p.labelY, textAnchor: 'end', style: { font: "500 11px 'DM Sans'", fill: '#475569' } }, p.name),
+          labelB: T({ x: p.labelX, y: p.labelY, textAnchor: 'end', style: { font: "italic 11.5px 'IM Fell English'", fill: '#3a2d18' } }, p.name),
+          labelC: T({ x: p.labelX, y: p.labelY, textAnchor: 'end', style: { font: "500 14px 'Caveat'", fill: '#d6d3ce' } }, p.name),
+          pawnLabelA: T({ x: p.pawn.x, y: p.pawn.ly, ...mid, style: { font: "600 11px 'DM Sans'", fill: '#0f172a', transition: 'x .7s, y .7s' } }, p.pawn.name),
+          pawnLabelB: T({ y: 22, ...mid, style: { font: "italic 10.5px 'IM Fell English'", fill: '#3a2d18' } }, p.pawn.name),
+          pawnLabelC: T({ y: 22, ...mid, style: { font: "500 13px 'Caveat'", fill: '#e7e5e0' } }, p.pawn.name) })),
+        labelR: two(r.cx, r.labelY, subY, { font: "22px 'IM Fell English'", letterSpacing: '.14em', textTransform: 'uppercase', fill: '#2e2415' }, { font: "italic 11px 'IM Fell English'", fill: '#3a2d18' }, r.name, r.heat === 'cold' ? `wastes · ${r.days} days untouched` : status) };
+    });
+    const regions = decorate(mod.buildMap(completed)), realms = decorate(cont);
+    const WF = { career: '#dbe4f0', finance: '#f3e8cf', health: '#dde8d6', relationships: '#f0dde3', leisure: '#ececec', mind: '#e4dff0' };
+    const hubRegions = decorate(mod.buildMap(completed, 'hub')).map(r => {
+      const mid = { textAnchor: 'middle' }, anch = v => v < -0.3 ? 'end' : v > 0.3 ? 'start' : 'middle';
+      const lx = 520 + Math.cos(r.a0) * (mod.HUB.rOut + 64), ly = 310 + Math.sin(r.a0) * (mod.HUB.rOut + 64), la = anch(Math.cos(r.a0));
+      const state = r.heat === 'cold' ? `cold ${r.days}d` : r.heat === 'warm' ? 'warm · moved today' : r.heat === 'cooling' ? `cooling · ${r.days}d quiet` : `steady · ${r.days}d ago`;
+      return { ...r, wf: WF[r.id], wfDash: r.heat === 'cold' ? '3 3' : '0', busyX: r.forkX + (r.cx - r.forkX) * 0.5, busyY: r.forkY + (r.cy - r.forkY) * 0.5,
+        busyLabel: T({ x: lx, y: ly + 28, textAnchor: la, style: { font: "600 10px 'Space Grotesk'", fill: '#27272a' } }, `${r.hours}h logged · 0 steps`),
+        labelW: React.createElement('g', null, T({ x: lx, y: ly, textAnchor: la, style: { font: "700 15px 'Space Grotesk'", fill: '#27272a', letterSpacing: '.04em', textTransform: 'uppercase' } }, r.name), T({ x: lx, y: ly + 14, textAnchor: la, style: { font: "11px 'Space Grotesk'", fill: '#71717a' } }, state)),
+        labelWPhone: T({ x: r.cx, y: r.cy, ...mid, style: { font: "700 20px 'Space Grotesk'", fill: '#27272a', letterSpacing: '.04em', textTransform: 'uppercase' } }, r.name),
+        projects: r.projects.map(p => { const last = p.tasks[p.tasks.length - 1], out = Math.hypot(last.x - 520, last.y - 310), ux = (last.x - 520) / out, uy = (last.y - 310) / out;
+          const ex = last.x + ux * 16, ey = last.y + uy * 16 + 4, a = anch(ux), pawnIsLast = p.pawn.id === last.id, show = (picked.has(p.pawn.id) || p.pawn.urgent) && !pawnIsLast;
+          return { ...p, pawnPicked: picked.has(p.pawn.id), tasks: p.tasks.map(t => ({ ...t, bx: t.x - 7, by: t.y - 7, fillW: t.isDone ? '#27272a' : '#fafafa' })),
+            labelW: React.createElement('g', null, T({ x: ex, y: ey, textAnchor: a, style: { font: "600 10.5px 'Space Grotesk'", fill: '#52525b' } }, p.name),
+              show ? T({ x: ex, y: ey + (uy < -0.2 ? -13 : 13), textAnchor: a, style: { font: "700 10.5px 'Space Grotesk'", fill: '#27272a' } }, '▶ ' + p.pawn.name) : null),
+            pawnLabelW: null }; }) }; });
+    const hubSlotsBase = [[-26, 36], [0, 36], [26, 36]];
+    const hubLabel = React.createElement('g', null, T({ x: 520, y: 246, textAnchor: 'middle', style: { font: "700 12px 'Space Grotesk'", fill: '#27272a', letterSpacing: '.08em' } }, 'HOME'), T({ x: 520, y: 296, textAnchor: 'middle', style: { font: "10px 'Space Grotesk'", fill: '#71717a' } }, 'hub tower'), T({ x: 520, y: 364, textAnchor: 'middle', style: { font: "10px 'Space Grotesk'", fill: '#71717a' } }, `${picked.size} of ${budget} moves`));
+    const hubLabelPhone = T({ x: 520, y: 300, textAnchor: 'middle', style: { font: "700 16px 'Space Grotesk'", fill: '#27272a', letterSpacing: '.08em' } }, 'HOME');
+    const legendW = React.createElement('g', { transform: 'translate(16 -56)' }, ['■ cleared  ▢ ahead  ▣ pawn (ship sprite)', '○ fork (flag)  ◌ picked today', 'red ring = overdue  hatch = overgrown', 'dashed circle = hours logged'].map((s, i) => T({ key: i, y: i * 13, style: { font: "10.5px 'Space Grotesk'", fill: '#71717a' } }, s)));
+    const nowTasks = regions.flatMap(r => r.projects.map(p => ({ ...p.pawn, color: r.ink, g: r.g, crumb: `${r.name} · ${p.name}`, cold: r.isCold })));
+    const trayIds = ['career:Upskilling:1', 'finance:Taxes:0', 'health:Gym:1', 'relationships:Friends:0', 'leisure:VR:0'];
+    const tray = trayIds.map(id => { const pre = id.slice(0, id.lastIndexOf(':')); const t = nowTasks.find(n => n.id.startsWith(pre)); const isP = picked.has(t.id);
+      return { ...t, picked: isP, unpicked: !isP, border: isP ? '#0f172a' : '#e2e8f0', bg: isP ? '#f8fafc' : '#fff', opacity: !isP && picked.size >= budget ? .45 : 1,
+        bgB: isP ? '#4d3d24' : 'transparent', bgC: isP ? '#262626' : '#1a1a1a', borderC: isP ? '#f59e0b' : '#333', bgW: isP ? '#27272a' : 'transparent', borderW: isP ? '#27272a' : '#d4d4d8',
+        pick: () => this.setState(s => { const n = new Set(s.picked); if (n.has(t.id)) n.delete(t.id); else if (n.size < budget) n.add(t.id); return { picked: n }; }),
+        complete: e => { e.stopPropagation(); this.setState(s => { const c = new Set(s.completed); c.add(t.id); return { completed: c, toast: `${t.crumb.split(' · ')[0]} +1 step · ${t.name} cleared`, movedToday: [...s.movedToday, t] }; }); } }; });
+    const budgetDots = Array.from({ length: budget }, (_, i) => ({ bg: i < picked.size ? '#0f172a' : 'transparent', bgB: i < picked.size ? '#4d3d24' : 'transparent', bgC: i < picked.size ? '#f59e0b' : 'transparent' }));
+    const left = budget - picked.size;
+    const ink = n => (regions.find(x => x.name === n) || {}).ink || '#94a3b8';
+    const moved = [
+      { area: 'Career', note: 'Decouple the timer, Add subtasks', steps: '+2', time: '6h 20m', color: ink('Career'), stepColor: '#16a34a' },
+      { area: 'Mind', note: 'Plan the day', steps: '+1', time: '40m', color: ink('Mind'), stepColor: '#16a34a' },
+      { area: 'Health & Body', note: 'Rejoin (again)', steps: '+1', time: '1h 10m', color: ink('Health & Body'), stepColor: '#16a34a' },
+      { area: 'Finance', note: 'day 6 quiet · ITR overdue', steps: '0', time: '—', color: ink('Finance'), stepColor: '#dc2626' },
+      { area: 'Relationships', note: 'day 5 quiet', steps: '0', time: '—', color: ink('Relationships'), stepColor: '#94a3b8' },
+      { area: 'Leisure', note: 'day 21 · 38h logged, not moving', steps: '0', time: '38h', color: '#94a3b8', stepColor: '#ca8a04' },
+      ...movedToday.map(t => ({ area: t.crumb.split(' · ')[0], note: `${t.name} cleared just now`, steps: '+1', time: 'today', color: t.color, stepColor: '#16a34a' })) ];
+    const movedFull = moved.map(m => { const r = regions.find(x => x.name === m.area); return { ...m, g: r ? r.g : '#6b6660', stepColorB: m.steps.startsWith('+') ? '#8a3b2a' : '#6b5637', stepColorC: m.steps.startsWith('+') ? '#f59e0b' : m.steps === '0' && m.time !== '—' ? '#d6d3ce' : '#6b6660' }; });
+    const plus = movedFull.filter(m => m.steps.startsWith('+')).length;
+    // ---- world map (turn 4) ----
+    const FLAG = { career: '#c9574a', finance: '#d9a13f', health: '#8b9c58', relationships: '#8fa4a8', leisure: '#a1a1aa', mind: '#7f9bb5' };
+    const world = mod.buildMap(completed, 'world'), now = Date.now(), { marches, landed } = this.state;
+    const worldRegions = world.map(r => { const far = r.projects.flatMap(p => p.tasks).reduce((a, t) => Math.hypot(t.x - 520, t.y - 310) > Math.hypot(a.x - 520, a.y - 310) ? t : a);
+      const fl = Math.hypot(far.x - 520, far.y - 310), ux = (far.x - 520) / fl, uy = (far.y - 310) / fl, lx = far.x + ux * 48, ly = far.y + uy * 48 + 4, anch = ux < -0.3 ? 'end' : ux > 0.3 ? 'start' : 'middle';
+      return { ...r, flag: FLAG[r.id],
+        labelG: React.createElement('g', null, T({ x: lx, y: ly - 6, textAnchor: anch, style: { font: "700 12px 'Space Grotesk'", fill: '#27272a', letterSpacing: '.06em', textTransform: 'uppercase' } }, r.name), T({ x: lx, y: ly + 7, textAnchor: anch, style: { font: "10px 'Space Grotesk'", fill: '#71717a' } }, r.heat === 'cold' ? `cold ${r.days}d · ${r.hours}h logged` : r.heat === 'warm' ? 'warm' : r.heat)),
+        projects: r.projects.map((p, j, arr) => { const last = p.tasks[p.tasks.length - 1], vx = last.x - 520, vy = last.y - 310, L = Math.hypot(vx, vy);
+          // perpendicular, pointing away from the sector axis (outer side of the fan); middle project of three goes radially outward
+          const ax = Math.cos(r.a0), ay = Math.sin(r.a0), side = (vx * -ay + vy * ax) >= 0 ? 1 : -1, mid3 = arr.length === 3 && j === 1;
+          let px = -vy / L * side, py = vx / L * side; if (mid3) { px = vx / L; py = vy / L; }
+          return { ...p, labelG: T({ x: last.x + px * 16, y: last.y + py * 16 + 4, textAnchor: px < -0.3 ? 'end' : px > 0.3 ? 'start' : 'middle', style: { font: "600 10px 'Space Grotesk'", fill: '#52525b' } }, p.name) }; }) }; });
+    const worldTasks = world.flatMap(r => r.projects.flatMap(p => p.tasks));
+    const worldRings = [2, 4, 6].map(k => ({ rx: k * 46 * 1.35, ry: k * 46 * 0.95, label: T({ x: 520 + k * 46 * 1.35 + 4, y: 314, style: { font: "9.5px 'Space Grotesk'", fill: '#71717a' } }, `${k}h march`) }));
+    const marchVals = marches.filter(m => !m.done).map(m => { const p = Math.min(1, (now - m.start) / m.dur), x = 520 + (m.tx - 520) * p, y = 310 + (m.ty - 310) * p, left = Math.ceil((m.dur - (now - m.start)) / 1000);
+      return { ...m, pct: `${Math.round(p * 100)}%`, eta: `lands in ${left}h`, markerStyle: `transform: translate(${x.toFixed(1)}px, ${y.toFixed(1)}px);`, etaLabel: T({ x: x + 12, y: y - 10, style: { font: "600 10px 'Space Grotesk'", fill: '#27272a' } }, `${left}h`) }; });
+    const inFlightIds = new Set(marchVals.map(m => m.id));
+    tray.forEach(t => { const wt = worldTasks.find(w => w.id === t.id) || {}; t.etaText = `${wt.dist || 3}h march`; t.inFlight = inFlightIds.has(t.id); t.canMarch = t.picked && !t.inFlight; t.march = e => { e.stopPropagation(); this.launch({ ...t, x: wt.x, y: wt.y, dist: wt.dist }); }; });
+    const homeLabel = React.createElement('g', null, T({ y: 34, textAnchor: 'middle', style: { font: "700 11px 'Space Grotesk'", fill: '#27272a', letterSpacing: '.08em' } }, 'HOME'), T({ y: 60, textAnchor: 'middle', style: { font: "10px 'Space Grotesk'", fill: '#71717a' } }, `${picked.size} of ${budget} orders`));
+    const legendG = React.createElement('g', { transform: 'translate(16 610)' }, ['■ outpost (yours)  ▣ target (flag = area)  ▢ far tower  hatch = overgrown', 'dashed rings = march time from home  ● marching piece + ETA  red ring = overdue'].map((s, i) => T({ key: i, y: i * 13, style: { font: "10.5px 'Space Grotesk'", fill: '#71717a' } }, s)));
+    const reports = [
+      { tag: 'WIN', color: '#16a34a', name: 'Decouple the timer from tasks', note: 'Career · landed yesterday 23:10' },
+      { tag: 'WIN', color: '#16a34a', name: 'Plan the day', note: 'Mind · landed yesterday 08:30' },
+      { tag: 'LOSS', color: '#dc2626', name: 'Call the group back', note: 'Relationships · pushed back Tue · 2nd attempt' } ];
+    const hubSlots = hubSlotsBase.map(([dx, dy], i) => ({ x: 520 + dx, y: 310 + dy, fill: i < picked.size ? '#27272a' : '#fafafa' }));
+    return { regions, tray, moved: movedFull, budget, budgetDots, hasToast: !!toast, toast, compassN, captionB, captionR, hubRegions, hubSlots, hubLabel, hubLabelPhone, legendW, worldRegions, worldRings, marches: marchVals, flightCount: `${marchVals.length} marching`, noFlights: marchVals.length === 0, landed, reports, homeLabel, legendG, coastPath: cont[0].coastPath, rivers: cont[0].rivers.map(d => ({ d })), realms, budgetLabel: `${picked.size} of ${budget} picked`, movedShort: `${plus} moved since yesterday`,
+      budgetHint: left > 0 ? `${left} pick${left > 1 ? 's' : ''} left. Everything else waits — the map remembers.` : 'Budget spent. Other tracks wait until tomorrow.' };
+  }
+}
+</script>
+</body>
+</html>
