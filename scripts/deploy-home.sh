@@ -16,7 +16,10 @@
 set -euo pipefail
 
 HOST="${HOME_HOST:-hydra@192.168.1.49}"
-API_URL="${TASKLOG_API_URL:-http://192.168.1.49:5115}"
+# Empty default = relative same-origin API calls. Caddy on :80 routes /api/*
+# to the backend (companion/doppel stay on Next), so ANY hostname the server
+# is reached by (IP, tasklog.home, Tailscale) works without a rebuild.
+API_URL="${TASKLOG_API_URL:-}"
 T="/home/hydra/tasklog"
 SERVER_TZ="Asia/Kolkata"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -115,4 +118,6 @@ REMOTE
 step "Verify"
 curl -s -o /dev/null -w "frontend http://192.168.1.49:3000 -> %{http_code}\n" "http://192.168.1.49:3000/"
 curl -s -o /dev/null -w "api      http://192.168.1.49:5115/api/projects -> %{http_code}\n" "http://192.168.1.49:5115/api/projects"
+curl -s -o /dev/null -w "caddy    http://192.168.1.49/ -> %{http_code}\n" "http://192.168.1.49/"
+curl -s -o /dev/null -w "caddy    http://192.168.1.49/api/projects -> %{http_code}\n" "http://192.168.1.49/api/projects"
 echo "Deploy complete."
