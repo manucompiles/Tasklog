@@ -20,6 +20,9 @@ import type { ZodRawShape, z } from "zod";
 export type CompanionTurnEvent =
   | { type: "text_delta"; text: string }
   | { type: "card"; capture: unknown }
+  // v4.1 (#92): the autonomous writers' receipt - the entity was already
+  // created; the chip is an affordance to edit/undo, never an approval ask.
+  | { type: "receipt"; capture: unknown; entity?: unknown }
   | { type: "done"; sdkSessionId: string | null; text: string }
   // partialText carries whatever streamed before the failure so the caller can
   // still persist it - words shown to the user must never exist only on screen.

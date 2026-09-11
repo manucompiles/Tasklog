@@ -23,6 +23,7 @@ namespace Tasklog.Api.Data
         public DbSet<Embedding> Embeddings => Set<Embedding>();
         public DbSet<Note> Notes => Set<Note>();
         public DbSet<Expense> Expenses => Set<Expense>();
+        public DbSet<ProfileNote> ProfileNotes => Set<ProfileNote>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -151,6 +152,9 @@ namespace Tasklog.Api.Data
                 .OnDelete(DeleteBehavior.SetNull);
             modelBuilder.Entity<Expense>().HasIndex(x => x.OccurredOn);
             modelBuilder.Entity<Expense>().HasIndex(x => x.ProjectId);
+
+            // Profile notes: the active set loads into every Sage conversation.
+            modelBuilder.Entity<ProfileNote>().HasIndex(n => n.Active);
 
             // Embeddings (#87): one vector per entity per model. The unique composite key
             // makes embed-on-write an upsert, and a model swap writes new rows instead of

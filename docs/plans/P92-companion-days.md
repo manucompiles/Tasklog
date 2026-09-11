@@ -1,6 +1,6 @@
 # P92 - The Companion Days (v4.1)
 
-**Overall Progress:** `33%`
+**Overall Progress:** `55%`
 
 ## TLDR
 Sage gains typed capture writers (mood, thought, note, expense, time) flowing
@@ -102,18 +102,18 @@ mockup is the UI spec for this plan; no separate /ui-spec round needed.
   - [x] 🟩 Merge semantics per kind (prose/mind/expenses/plan)
   - [x] 🟩 Concurrency: last-writer-per-section, 256KB cap preserved
 
-- [ ] 🟨 **Step 4: Sage tools + conduct** `[sequential]` → depends on: Step 2
-  - [ ] 🟥 propose_capture extended: type + typed payload schemas
-  - [ ] 🟥 persona.md: the conduct (anti-Socrates rules, morning statement,
+- [x] 🟩 **Step 4: Sage tools + conduct** `[sequential]` → depends on: Step 2
+  - [x] 🟩 Autonomous writer tools (log_task/mood/thought/expense/time, weave_journal, undo_capture) replace propose/update_capture
+  - [x] 🟩 persona.md: the conduct (anti-Socrates rules, morning statement,
         evening ceremony, register matching, invisible receipts language ban)
-  - [ ] 🟥 Morning brief + evening What Moved / What Came Back derivations
-        (route-side from existing APIs; no new job system)
-  - [ ] 🟥 ProfileNotes store (Text, Kind, SourceDate, Active) + context
+  - [x] 🟩 Morning brief + evening What Moved / What Came Back derivations
+        (todayContext ledger injection; page-side rendering in Step 5)
+  - [x] 🟩 ProfileNotes store (Text, Kind, SourceDate, Active) + context
         injection: Sage's own note sheet - distilled at session close via a
         write_profile_note tool, loaded into every conversation; surfaced
         and correctable in the Stage B Profile tab (until then, by chat)
 
-- [ ] 🟥 **Step 5: Journal day page redo** `[UI]` `[sequential]` → depends on:
+- [ ] 🟨 **Step 5: Journal day page redo** `[UI]` `[sequential]` → depends on:
   Steps 2-3 (pin 16)
   - [ ] 🟥 Three-column layout, toggleable day rail, derived tiles
   - [ ] 🟥 Morning brief section (auto), dump items with destiny links
