@@ -1,0 +1,685 @@
+<title>Projects Tab Mockup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+  /* Single-theme on purpose: mirrors Tasklog's real light UI (UI-SPEC.md tokens). */
+  :root {
+    --primary: #18181B; --secondary: #3F3F46; --accent: #2563EB;
+    --bg: #FAFAFA; --surface: #FFFFFF; --text: #18181B; --muted: #71717A;
+    --border: #E4E4E7; --success: #22C55E; --warning: #EAB308;
+    --note: #b45309; --note-bg: #fffbeb; --note-bd: #fcd34d;
+  }
+  body { background: var(--bg); color: var(--text); font-family: "DM Sans", -apple-system, sans-serif; font-size: 15px; margin: 0; padding: 28px 16px 60px; }
+  .frame { max-width: 1060px; margin: 0 auto; }
+  .mocknote { font-size: 13.5px; color: var(--note); background: var(--note-bg); border: 1px solid var(--note-bd); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; }
+  .app { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(24,24,27,0.06); }
+  .topbar { display: flex; align-items: center; gap: 22px; padding: 0 22px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .logo { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 19px; padding: 14px 0; }
+  nav { display: flex; gap: 4px; }
+  nav a { font-size: 14.5px; color: var(--muted); text-decoration: none; padding: 16px 12px 13px; border-bottom: 3px solid transparent; }
+  nav a.active { color: var(--text); font-weight: 500; border-bottom-color: var(--accent); }
+  nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .cols { display: grid; grid-template-columns: 232px 1fr; min-height: 560px; }
+  aside { border-right: 1px solid var(--border); padding: 18px 0; background: #fcfcfd; }
+  aside h3 { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; padding: 0 18px; font-weight: 500; }
+  aside h3.hold { margin-top: 20px; }
+  .proj { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; border: 0; background: none; font: inherit; font-size: 14.5px; color: var(--text); padding: 8px 18px; cursor: pointer; }
+  .proj:hover { background: #f1f1f3; }
+  .proj:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .proj.sel { background: #eef2ff; font-weight: 500; box-shadow: inset 3px 0 0 var(--accent); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .proj .cl { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+  .proj.holditem { color: var(--muted); font-size: 13.5px; padding: 5px 18px; }
+  aside h3.area { cursor: pointer; }
+  aside h3.area:hover { color: var(--text); }
+  .areacfg { margin: 2px 12px 10px; background: #f8fafc; border: 1px dashed var(--border); border-radius: 8px; padding: 9px 12px; font-size: 12.5px; color: var(--secondary); }
+  .areacfg b { font-size: 11px; letter-spacing: 0.06em; color: var(--muted); display: block; }
+  .newproj { color: var(--accent); font-size: 13.5px; }
+  .composer { margin: 4px 12px; border: 1px solid var(--accent); border-radius: 8px; padding: 8px 10px; font-size: 13px; color: var(--muted); background: var(--surface); }
+  .composer .chips { margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .composer .chip { font-size: 11.5px; }
+  .pulse { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; font-variant-numeric: tabular-nums; }
+  .pulse b { color: #15803d; font-weight: 500; }
+  details.chapters { margin: 6px 0 0; font-size: 13px; color: var(--muted); max-width: 64ch; }
+  details.chapters summary { cursor: pointer; font-size: 12px; letter-spacing: 0.04em; }
+  details.chapters div { padding: 6px 0 0 14px; border-left: 2px solid var(--border); margin-top: 6px; }
+  .pane { padding: 24px 28px; }
+  .phead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .phead h1 { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 24px; margin: 0; }
+  .chip { font-size: 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .chip.active { color: #15803d; border-color: #bbf7d0; background: #f0fdf4; }
+  .chip.hold { color: var(--note); border-color: var(--note-bd); background: var(--note-bg); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 18px 0 22px; }
+  .tile { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .tile .v { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 21px; }
+  .tile .k { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+  .sec { margin-top: 22px; }
+  .sec h2 { font-family: "Space Grotesk", sans-serif; font-size: 15px; font-weight: 600; margin: 0 0 10px; }
+  .goal { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+  .goal:last-of-type { border-bottom: 0; }
+  .goalbar { flex: none; width: 120px; height: 6px; border-radius: 3px; background: #eef0f2; overflow: hidden; margin-left: auto; }
+  .goalbar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .goal .pct { flex: none; width: 40px; text-align: right; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .goalcfg { background: #f8fafc; border: 1px dashed var(--border); border-radius: 8px; padding: 10px 14px; margin: 4px 0 8px; font-size: 13px; display: grid; gap: 5px; }
+  .goalcfg span { color: var(--muted); display: inline-block; width: 110px; }
+  .cfgbtn { font: inherit; font-size: 12.5px; color: var(--accent); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; width: fit-content; }
+  .cfgbtn:hover { border-color: var(--accent); }
+  .task { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+  .task:last-child { border-bottom: 0; }
+  .cb { width: 16px; height: 16px; border: 1.5px solid #c8c8cd; border-radius: 4px; flex: none; }
+  .task .meta { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .task .due { color: var(--note); }
+  .entry { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; align-items: baseline; }
+  .entry:last-child { border-bottom: 0; }
+  .entry .tm { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12.5px; flex: none; width: 92px; }
+  .entry .dur { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12.5px; }
+  .twocol { display: grid; grid-template-columns: 1.4fr 1fr; gap: 26px; }
+  .pin { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--note); color: #fff; font-size: 11.5px; font-weight: 700; flex: none; }
+  /* journal */
+  .jgrid { display: grid; grid-template-columns: 1.25fr 1fr 185px; gap: 26px; }
+  .jgrid.norail { grid-template-columns: 1.25fr 1fr; }
+  .jgrid.norail .rail { display: none; }
+  @media (max-width: 900px) { .jgrid { grid-template-columns: 1fr; } }
+  .rail { border-left: 1px solid var(--border); padding-left: 14px; }
+  .rail h2 { font-family: "Space Grotesk", sans-serif; font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: #71717A; margin: 0 0 10px; }
+  .tl { display: flex; gap: 8px; margin: 0 0 2px; font-size: 11.5px; align-items: stretch; }
+  .tl .tt { color: #a1a1aa; width: 34px; flex: none; font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .tl .bar { flex: none; width: 4px; border-radius: 2px; }
+  .tl .lbl { color: #52525b; padding-bottom: 6px; }
+  .tl .lbl small { color: #a1a1aa; }
+  .b-rest { background: #94a3b8; } .b-rit { background: #f59e0b; } .b-work { background: #2563EB; }
+  .b-drift { background: #dc2626; } .b-meal { background: #22C55E; } .b-office { background: #64748b; }
+  .destiny { display: inline-block; font-size: 10.5px; letter-spacing: 0.03em; color: #71717A; background: #f4f4f5; border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; margin-left: 8px; vertical-align: 1px; cursor: pointer; }
+  .destiny:hover { border-color: var(--accent); color: var(--accent); }
+  .autoline { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 9px 13px; font-size: 13.5px; margin: 6px 0; }
+  .autoline.moved { background: #eff6ff; border-color: #bfdbfe; }
+  .jfield { margin: 10px 0; font-size: 13.5px; }
+  .jfield b { display: block; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #71717A; font-weight: 500; margin-bottom: 2px; }
+  .jfield span { color: #a1a1aa; }
+  .overlay { position: fixed; inset: 0; background: rgba(24,24,27,0.35); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+  .modal { background: var(--surface); border-radius: 12px; box-shadow: 0 12px 40px rgba(24,24,27,0.2); max-width: 520px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 22px 26px; }
+  .modal h3 { font-family: "Space Grotesk", sans-serif; font-size: 18px; margin: 0 0 4px; }
+  .modal .mmeta { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .modal .mbody { font-size: 14px; line-height: 1.6; color: var(--secondary); }
+  .modal .mbody p { margin: 8px 0; }
+  .modal .mrow { display: grid; grid-template-columns: 120px 1fr; gap: 6px 12px; font-size: 13.5px; padding: 12px 0; border-top: 1px solid var(--border); }
+  .modal .mrow span { color: var(--muted); }
+  .modal .mfoot { display: flex; gap: 8px; margin-top: 16px; }
+  .notelink { color: inherit; cursor: pointer; }
+  .notelink:hover { text-decoration: underline dotted var(--muted); }
+  .composer input.np { font: inherit; font-size: 13.5px; border: 0; outline: 0; background: none; color: var(--text); width: 100%; }
+  .combolist { margin-top: 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 13px; overflow: hidden; }
+  .combolist input { font: inherit; font-size: 12.5px; border: 0; outline: 0; border-bottom: 1px solid var(--border); padding: 6px 10px; width: 100%; box-sizing: border-box; background: none; color: var(--text); }
+  .combolist .opt { padding: 6px 10px; cursor: pointer; }
+  .combolist .opt:hover { background: #f1f1f3; }
+  .combolist .newrow { color: var(--accent); border-top: 1px dashed var(--border); }
+  .legendnotes { margin-top: 20px; font-size: 13.5px; color: var(--secondary); display: grid; gap: 7px; max-width: 70ch; }
+  .legendnotes div { display: flex; gap: 9px; align-items: baseline; }
+  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } aside { display: flex; flex-wrap: wrap; gap: 2px; padding: 10px; } aside h3 { width: 100%; } .twocol { grid-template-columns: 1fr; } }
+</style>
+
+<div class="frame">
+  <div class="mocknote"><strong>Real data.</strong> Snapshot of the live Tasklog DB taken 10 Sep 2026, 22:15 IST - the full day: 4 clients, 8 projects, the ITR completion, the Kerala money log, every honest time entry. Ask Claude to republish for a fresh snapshot.</div>
+
+  <div class="app">
+    <div class="topbar">
+      <span class="logo">Tasklog</span>
+      <nav>
+        <a href="#" data-tab="tasks">Tasks</a><a href="#" style="opacity:.45" title="not mocked yet">Time</a><a href="#" data-tab="journal">Journal</a><a href="#" style="opacity:.45" title="not mocked yet">Sage</a><a href="#" data-tab="projects" class="active">Projects</a><a href="#" data-tab="profile">Profile</a>
+      </nav>
+    </div>
+    <div id="tab-tasks" hidden>
+      <div class="pane">
+        <div class="phead"><h1>Tasks</h1><span class="chip">8 total · 1 done today</span></div>
+        <div class="sec"><h2 style="color:#71717A">Life · Personal</h2>
+          <div class="task"><span class="cb"></span>🪪 Update Aadhaar card<span class="meta due">call dad · rolled to tomorrow</span></div>
+          <div class="task"><span class="cb"></span>🚶 Morning Walk<span class="meta">habit · 0/5 this week</span></div>
+          <div class="task"><span class="cb"></span>🌙 Sleep<span class="meta">nightly</span></div>
+        </div>
+        <div class="sec"><h2 style="color:#71717A">Life · Finance</h2>
+          <div class="task"><span class="cb" style="background:#22C55E;border-color:#22C55E"></span><s style="color:#71717A">🧾 File ITR</s><span class="meta">done 21:17 · 22m</span></div>
+        </div>
+        <div class="sec"><h2 style="color:#71717A">Life · Chores</h2>
+          <div class="task"><span class="cb"></span>📦 Get things from Manish's home<span class="meta due">due Sat 12</span></div>
+          <div class="task"><span class="cb"></span>🌞 Rise and Shine<span class="meta">daily ritual · 1h 19m today</span></div>
+        </div>
+        <div class="sec"><h2 style="color:#71717A">Travel · Kerala</h2>
+          <div class="task"><span class="cb"></span>🌴 Kerala Trip - money log<span class="meta">reshaping into real expenses (pin 10)</span></div>
+        </div>
+        <div class="sec"><h2 style="color:#71717A">Projects · Tasklog</h2>
+          <div class="task"><span class="cb"></span>📐 Projects tab: dashboard design<span class="meta">if energy · 9 pins today</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-journal" hidden>
+      <div class="pane">
+        <div class="phead"><h1>Friday, 11 September</h1><span class="chip">daily · streak 2</span>
+          <span style="margin-left:auto;display:flex;gap:6px;align-items:center">
+            <button class="cfgbtn" id="railtoggle">⏱ show the day</button>
+            <span class="chip">‹ Sep 10</span><span class="chip active">Today</span><span class="chip" style="opacity:.4">Sep 12 ›</span>
+          </span>
+        </div>
+        <div class="tiles" style="margin-top:16px">
+          <div class="tile"><div class="v">-</div><div class="k">no check-in yet today</div></div>
+          <div class="tile"><div class="v">1 / 3</div><div class="k">non-negotiables (review ✓)</div></div>
+          <div class="tile"><div class="v">0</div><div class="k">spent today</div></div>
+          <div class="tile"><div class="v">12h 40m</div><div class="k">tracked, no gaps</div></div>
+        </div>
+        <div class="jgrid norail" id="jgrid">
+          <div>
+            <div class="sec"><h2>Morning brief <span style="font-size:11px;color:#71717A;font-weight:400">auto</span> <span class="pin">16</span></h2>
+              <div class="autoline moved">Slept 23:02-06:18 (7h 15m). The server passed its first full night alone - backup, suspend, self-wake at 06:00:01. Rolled over from yesterday: the dad call about Aadhaar.</div>
+            </div>
+            <div class="sec"><h2>What's going on</h2>
+              <p style="font-size:14px;color:#3F3F46;margin:0;max-width:60ch">Dostoevsky in my head this morning - the wallpaper paragraph, like an old friend. The lie it points at: six years, saying nothing. Named it all fully today, and named the fear under it: forgetting myself.</p>
+            </div>
+            <div class="sec"><h2>Mind dump</h2>
+              <div class="task" style="font-size:13.5px">① The Zosima paragraph, "close your taverns"<span class="destiny" data-d="reflection">→ reflection</span><span class="meta">sourced</span></div>
+              <div class="task" style="font-size:13.5px">③ Why I delay the switch - "the path I've chosen"<span class="destiny" data-d="goal">→ goal seed</span></div>
+              <div class="task" style="font-size:13.5px">④ Identities strengthen from actions, like skills<span class="destiny" data-d="idea">→ idea</span></div>
+              <div class="task" style="font-size:13.5px">⑧ The core truth: systems to avoid forgetting<span class="destiny" data-d="memory">→ memory</span></div>
+              <div class="task" style="font-size:13.5px">⑨ 3D printer, passion projects, fun science<span class="destiny" data-d="wish">→ wishes</span></div>
+              <div class="task" style="font-size:13.5px">⑩ The hunter-gatherer Reddit comment<span class="destiny" data-d="reflection">→ reflection</span><span class="meta">sourced</span></div>
+              <div class="task" style="font-size:12.5px;color:#a1a1aa">+ 4 more · each number is a link phrase - click a destiny to open the entity</div>
+            </div>
+          </div>
+          <div>
+            <div class="sec" style="margin-top:22px"><h2>Today's plan</h2>
+              <div class="task" style="font-size:13.5px"><span class="cb" style="background:#22C55E;border-color:#22C55E"></span><s style="color:#71717A">🔍 Review the dogfood logs</s><span class="meta">non-negotiable · 1h46m</span></div>
+              <div class="task" style="font-size:13.5px"><span class="cb"></span>🧠 DSA: 1 old + 1 new<span class="meta due">non-negotiable</span></div>
+              <div class="task" style="font-size:13.5px"><span class="cb"></span>🎯 Switch research, 5-min door<span class="meta due">non-negotiable</span></div>
+              <div class="task" style="font-size:13.5px"><span class="cb"></span>📞 Deepika ~6 PM<span class="meta due">today</span></div>
+            </div>
+            <div class="sec"><h2>Front of mind <span style="font-size:11px;color:#71717A;font-weight:400">click any item - status and details live on it</span></h2>
+              <div class="task mindable closeable" style="font-size:13.5px;cursor:pointer">The switch effort starts regardless of feeling unprepared<span class="meta">open</span></div>
+              <div class="task mindable closeable" style="font-size:13.5px;cursor:pointer">Aditya trip: bail, or say the budget honestly<span class="meta">rolled 1 day</span></div>
+            </div>
+            <div class="sec"><h2>Back of mind</h2>
+              <div class="task mindable closeable" style="font-size:13.5px;cursor:pointer">Unpack the marriage + stuck-loop thought<span class="meta">parked Sep 10</span></div>
+              <div class="task mindable closeable" style="font-size:13.5px;cursor:pointer">Exit from the YT binge storms<span class="meta">parked Sep 10</span></div>
+              <div class="task mindable closeable" style="font-size:13.5px;cursor:pointer">Resume morning walks - the Patternarium loop<span class="meta">habit exists · 0/5</span></div>
+            </div>
+            <div class="sec"><h2>Evening close <span style="font-size:11px;color:#71717A;font-weight:400">an activity, not a form</span></h2>
+              <div class="autoline moved"><strong>What moved:</strong> the review shipped and drove five design locks. The type system, the goal entity, and the Profile tab all exist now. Office toggle worked on. <em>(auto, from the ledger)</em></div>
+              <div style="font-size:13px;color:#52525b;margin:10px 0">The close walks you through the mind sections above and the unfinished plan - each item takes its verdict <strong>in place</strong> (✓ closed · → tomorrow · ✕ let go, kept struck-through). Nothing is duplicated here; this is the ceremony, the sections are the surface. <span style="color:#71717A">3 items still open.</span></div>
+              <div class="autoline"><strong>What came back:</strong> streak held at 2. Developer fed by 1h46m of design. The profile learned 3 new things about you. <em>(auto - lands after the clearing)</em></div>
+              <div class="jfield"><b>Closing thoughts</b><span>optional prose, after the movement - "the taverns, at least two or three"</span></div>
+            </div>
+          </div>
+          <div class="rail">
+            <h2>The day <span class="pin" style="width:15px;height:15px;font-size:10px">16</span></h2>
+            <div class="tl"><span class="tt">23:02</span><span class="bar b-rest" style="min-height:34px"></span><span class="lbl">🌙 Sleep<br><small>7h 15m</small></span></div>
+            <div class="tl"><span class="tt">06:30</span><span class="bar b-rit" style="min-height:22px"></span><span class="lbl">🌞 Rise and Shine<br><small>1h 21m</small></span></div>
+            <div class="tl"><span class="tt">07:52</span><span class="bar b-rit" style="min-height:20px"></span><span class="lbl">🧺🚿🍵🍞 Ritual<br><small>1h 20m</small></span></div>
+            <div class="tl"><span class="tt">09:02</span><span class="bar b-work" style="min-height:10px"></span><span class="lbl">📋 Plan<br><small>12m</small></span></div>
+            <div class="tl"><span class="tt">09:14</span><span class="bar b-drift" style="min-height:26px"></span><span class="lbl">📱 Insta, Reddit, YT<br><small>1h 38m</small></span></div>
+            <div class="tl"><span class="tt">10:52</span><span class="bar b-work" style="min-height:28px"></span><span class="lbl">🔍 Review + locks<br><small>1h 46m</small></span></div>
+            <div class="tl"><span class="tt">12:38</span><span class="bar b-meal" style="min-height:10px"></span><span class="lbl">🍳 Brunch<br><small>25m</small></span></div>
+            <div class="tl"><span class="tt">13:04</span><span class="bar b-work" style="min-height:8px"></span><span class="lbl">📐 Design<br><small>10m</small></span></div>
+            <div class="tl"><span class="tt">13:15</span><span class="bar b-office" style="min-height:22px"></span><span class="lbl">🛳️ Minicruise toggle<br><small>1h 41m</small></span></div>
+            <div class="tl"><span class="tt">14:56</span><span class="bar b-work" style="min-height:8px"></span><span class="lbl">Journal design<br><small>16m</small></span></div>
+            <div class="tl"><span class="tt">15:12</span><span class="bar b-drift" style="min-height:24px"></span><span class="lbl">📺 YouTube<br><small>running</small></span></div>
+            <div style="font-size:11px;color:#a1a1aa;margin-top:10px">colors: ritual · work · office · drift · meals · rest</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="tab-profile" hidden>
+      <div class="pane">
+        <div class="phead"><h1>Manu</h1><span class="chip">the living profile</span></div>
+        <p style="color:#52525b;font-size:14px;max-width:64ch;margin:10px 0 0">What the system must never forget: who I am, where I want to be. Everything here is derived or confirmed - and everything is correctable.</p>
+        <div class="twocol" style="margin-top:20px">
+          <div>
+            <div class="sec"><h2>Identities <span class="pin">15</span></h2>
+              <div class="task"><span style="font-weight:500">👨‍💻 Developer</span><span class="meta">fed by: walk+DSA loop, shipping · hungry this week (0/5 walks)</span></div>
+              <div class="task"><span style="font-weight:500">🎮 Gamer</span><span class="meta">fed by: play, game design (Life Map, empire)</span></div>
+              <div class="task" style="color:#a1a1aa">identities appear as evidence accumulates - never declared</div>
+            </div>
+            <div class="sec"><h2>Areas &amp; the map</h2>
+              <div class="task">Life<span class="meta">Self + Responsibility · 3 projects · "owed care"</span></div>
+              <div class="task">Work<span class="meta">P&amp;O · 6 years this Nov 2</span></div>
+              <div class="task">Switch<span class="meta">the career move · "why are you waiting for me"</span></div>
+              <div class="task">Travel<span class="meta">Kerala, departing Sep 15</span></div>
+              <div class="task" style="color:#a1a1aa">+ Hobbies, whenever gaming and reading want a home</div>
+            </div>
+            <div class="sec"><h2>Wishes · someday</h2>
+              <div class="task">🖨️ Own a 3D printer</div>
+              <div class="task">🔬 Passion projects - science and engineering for the fun of it</div>
+              <div class="task">🧩 Be done with DSA once and for all (Patternarium's whole reason)</div>
+            </div>
+          </div>
+          <div>
+            <div class="sec"><h2>What Sage knows <span style="font-size:11px;color:#71717A;font-weight:400">· loads into every conversation</span></h2>
+              <div class="task" style="font-size:13.5px">Wakes 06:35-06:45, any day of the week <span class="meta">✕</span></div>
+              <div class="task" style="font-size:13.5px">Mornings are protected - no tangents before breakfast <span class="meta">✕</span></div>
+              <div class="task" style="font-size:13.5px">Deadpan "done and dusted" = don't celebrate <span class="meta">✕</span></div>
+              <div class="task" style="font-size:13.5px">Dread breaks with 5-minute doors <span class="meta">✕</span></div>
+              <div class="task" style="font-size:13.5px">Lexicon: "sunshine"=Rise and Shine, "warnings"=mornings… <span class="meta">✕</span></div>
+              <div class="task" style="font-size:13.5px;color:#a1a1aa">distilled from the days, not typed in - remove anything</div>
+            </div>
+            <div class="sec"><h2>People</h2>
+              <div class="task plink" data-person="deepika" style="cursor:pointer">Deepika<span class="meta">talked today ✓ · rhythm ~monthly</span></div>
+              <div class="task plink" data-person="manish" style="cursor:pointer">Manish<span class="meta">daily thread · trip in 4 days</span></div>
+              <div class="task">Mom<span class="meta">laundry ally, morning stakeholder</span></div>
+              <div class="task">Dad<span class="meta">the Aadhaar process guide</span></div>
+              <div class="task">Aditya<span class="meta">bachelor trip · the 1L question, still open</span></div>
+            </div>
+            <div class="sec"><h2>Memories · notable, resurfaced when it matters</h2>
+              <div class="task plink" data-mem="1" style="cursor:pointer;font-size:13.5px">Nov 2 marks six years at the job</div>
+              <div class="task" style="font-size:13.5px">The 2025 streak died Mar 20 - two dense months, then silence</div>
+              <div class="task" style="font-size:13.5px">The Zosima paragraph lives on the phone wallpaper</div>
+              <div class="task" style="font-size:13.5px">ITR: 11 hours of dread, 22 minutes of doing</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols" id="tab-projects">
+      <aside>
+        <h3 class="area" data-area="life">Life ▾ <span class="pin" style="width:15px;height:15px;font-size:10px">5</span></h3>
+        <div class="areacfg" id="acfg-life" hidden><b>AREA · THE WHY</b>The parts of me that are owed care - self, house, family. Never finishes, only holds. <span style="color:#2563EB;cursor:pointer">edit</span></div>
+        <button class="proj" data-p="personal"><span class="dot" style="background:#22C55E"></span>Personal<span class="cl">Self</span></button>
+        <button class="proj" data-p="finance"><span class="dot" style="background:#EAB308"></span>Finance<span class="cl">Self</span></button>
+        <button class="proj" data-p="chores"><span class="dot" style="background:#f97316"></span>Chores<span class="cl">Resp.</span></button>
+        <h3 class="hold">Travel</h3>
+        <button class="proj" data-p="kerala"><span class="dot" style="background:#14b8a6"></span>Kerala</button>
+        <h3 class="hold">Work</h3>
+        <button class="proj" data-p="pno"><span class="dot" style="background:#64748b"></span>P&amp;O Support</button>
+        <h3 class="hold">Projects</h3>
+        <button class="proj sel" data-p="tasklog"><span class="dot" style="background:#2563EB"></span>Tasklog</button>
+        <button class="proj" data-p="procureflow"><span class="dot" style="background:#8b5cf6"></span>ProcureFlow</button>
+        <button class="proj" data-p="carrerkit"><span class="dot" style="background:#ec4899"></span>CarrerKit</button>
+        <h3 class="hold">On hold</h3>
+        <button class="proj holditem" data-p="patternarium"><span class="dot" style="background:#d4d4d8"></span>Patternarium</button>
+        <button class="proj holditem" data-p="doppel"><span class="dot" style="background:#d4d4d8"></span>doppel</button>
+        <button class="proj holditem" data-p="phonectl"><span class="dot" style="background:#d4d4d8"></span>phonectl</button>
+        <button class="proj holditem" data-p="argonaut"><span class="dot" style="background:#d4d4d8"></span>Argonaut</button>
+        <button class="proj holditem" data-p="mazerunner"><span class="dot" style="background:#d4d4d8"></span>Maze Runner</button>
+        <button class="proj holditem" data-p="tasklogbiz"><span class="dot" style="background:#d4d4d8"></span>Tasklog Business</button>
+        <button class="proj holditem" data-p="morehold"><span class="dot" style="background:#d4d4d8"></span>+ 7 more</button>
+        <button class="proj newproj" id="newbtn">+ New project</button>
+        <div class="composer" id="composer" hidden>
+          <input class="np" placeholder="Project name…">
+          <div class="chips">
+            <span class="chip combo" data-combo="area" style="cursor:pointer" id="chip-area">area: Life ▾</span>
+            <span class="chip combo" data-combo="client" style="cursor:pointer" id="chip-client">client: Self ▾</span>
+            <button class="cfgbtn">Create</button>
+          </div>
+          <div class="combolist" id="combo-area" hidden>
+            <input placeholder="Search or type a new area…" data-for="area">
+            <div class="opts"></div>
+          </div>
+          <div class="combolist" id="combo-client" hidden>
+            <input placeholder="Search or type a new client…" data-for="client">
+            <div class="opts"></div>
+          </div>
+          <div style="margin-top:6px;font-size:11.5px;color:#a1a1aa">One line creates it. Re-file later by dragging the row between areas.</div>
+        </div>
+      </aside>
+      <div class="pane" id="pane"></div>
+    </div>
+  </div>
+
+  <div class="legendnotes">
+    <div><span class="pin">1</span><span><strong>Entry point:</strong> Projects tab lands on the sidebar; a click opens the project's home in place. Mobile: horizontal chip strip.</span></div>
+    <div><span class="pin">2</span><span><strong>Status lives on the project</strong> (active / on hold) - the day-one schema gap. On-hold projects keep a full (quieter) home and a Revive action, never deleted.</span></div>
+    <div><span class="pin">3</span><span><strong>Goals &amp; milestones are per-project</strong> (Manu, 10 Sep): they exist to keep THIS project pointed somewhere. Life-level direction belongs to Areas and the future map, not here - the old world's life-goals-broken-into-projects inverted.</span></div>
+    <div><span class="pin">4</span><span><strong>Time is reused, not re-entered:</strong> the Today list is the Time tab filtered to this project.</span></div>
+    <div><span class="pin">5</span><span><strong>Life vs Projects split:</strong> one tab, grouped sidebar. Life = sections that never finish (client = the split: Self, Responsibility). Projects = endeavors that ship.</span></div>
+    <div><span class="pin">6</span><span><strong>Home, not dashboard:</strong> About is ONE line - it exists for the homely, safe feeling of opening a place. Now is ONE focus. Both Sage-fillable; no block editor.</span></div>
+    <div><span class="pin">7</span><span><strong>Notes &amp; mentions:</strong> 2 recent visible + View all; journal lines and captures tagged to the project gather here automatically.</span></div>
+    <div><span class="pin">17</span><span><strong>Universal editability + deep persons (11 Sep, LOCKED):</strong> every field on every entity is editable by hand AND by the AI - nothing is system-owned. A person is a deep entity: who they are to me, last contact + contact rhythm (nudge when the gap stretches), dates (birthdays, asked casually once), open threads, next-time notes, memories about them, shared projects/trips, money splits, mentions. Click Deepika and Manish to compare two shapes of the same entity.</span></div>
+    <div><span class="pin">16</span><span><strong>The Journal redo (11 Sep, LOCKED):</strong> the day as a story - morning brief auto-written (the night, the rollovers), dump items as link phrases with DESTINY chips (click one), derived tiles, structured expenses, the day's timeline as a narrow right rail below the tiles (storms and rituals visible as shapes). The EVENING CLOSE is an activity, not a form: each open item gets a verdict (✓ closed, → tomorrow, ✕ let go - consciously, kept struck-through) - movement over logging; "What moved" opens it, "What came back" lands after the clearing, closing thoughts optional. Sections appear only with content.</span></div>
+    <div><span class="pin">15</span><span><strong>The Profile tab (11 Sep):</strong> the living profile made visible - identities (evidence-fed, never declared), areas with their whys, wishes, people, notable memories, and "What Sage knows": the distilled persona that loads into every conversation. Memory = notable and looked up; persona = worn. Everything on this page is correctable by the user - the transparency contract. Click Deepika or a memory to see the entity popups.</span></div>
+    <div><span class="pin">14</span><span><strong>Notes are entities; popups over inline (11 Sep, LOCKED):</strong> a note is markdown at its core (Obsidian-equivalent) - journal lines and mention rows carry only its link phrase; clicking opens the note itself. Goals, areas, notes all open as POPUPS, not inline folds - a popup has room for the full component and its choices. Try it: click a goal, an area header, or a mention.</span></div>
+    <div><span class="pin">11</span><span><strong>Area ≠ Client (11 Sep, LOCKED):</strong> Area is the broad domain (Life, Work, Travel, Switch, Hobbies); Client is the part that is owed within it (Self and Responsibility both live under Life). Sidebar groups by AREA; the chip on a project names its CLIENT. Areas carry a free-text why (click a header). The composition is the user's: the system builds pieces, the user arranges them - Hobbies under client Self in its own area must just work.</span></div>
+    <div><span class="pin">12</span><span><strong>Creation and re-filing (11 Sep, LOCKED):</strong> "+ New project" is a one-line composer - type a name, area and client are COMBOBOX chips: the dropdown's input is search AND create-new in one (type "Hobbies", get + Create "Hobbies"). Try it below the sidebar. Re-file by dragging a row between areas. No modal forms, ever. Note links render plain (understood, not blue) - the app stays simple; goal's inner screen gets its own design round later.</span></div>
+    <div><span class="pin">13</span><span><strong>The pulse + chapters (11 Sep, LOCKED):</strong> every project shows one derived pulse line ("moved today · 33m this week"); NOW is append-only - when it changes, the old Now archives as a dated chapter. Tiles are always four, always derived, defaulted by kind (life-area / endeavor / on-hold). Area occupancy and distribution views = reports, later.</span></div>
+    <div><span class="pin">10</span><span><strong>Expenses are NOT tasks (10 Sep, night):</strong> the money-log-as-task-comments was scaffolding. An expense is its own row - amount, what, date, split state - living as a structured section in the day's JOURNAL (day-matched, like check-ins), rolled up by trip/project/month elsewhere. The Journal tab above shows the redesign.</span></div>
+    <div><span class="pin">9</span><span><strong>Expenses are an optional per-project section (10 Sep, evening):</strong> a project that costs money (a trip, a filing) grows a 💸 panel; most projects never show one. Finance itself graduates later into its own first-class type, like people - cross-cutting, attaching to projects, days, and splits.</span></div>
+    <div><span class="pin">8</span><span><strong>Goals are configurable entities:</strong> click one - target, expectation, progress source, updates. Schema mined from the Second Brain template (timespan, reason, numeric progress); its Goals folder stayed EMPTY because the form came first - here a goal is born as one spoken line and deepens later.</span></div>
+  </div>
+</div>
+
+<script>
+  // ---- REAL SNAPSHOT, 2026-09-10 12:30 IST ----
+  const DATA = {
+    tasklog: {
+      name: "Tasklog", client: null, status: "Active",
+      about: "The self-hosted task system where my data lives, end to end.",
+      now: "Dogfood days - the log becomes the next feature's scope.",
+      pulse: "<b>moved today</b> · 33m this week · 10 design pins locked",
+      chapters: [["Sep 8-9", "The server week - hydramachine went live, the phone retired."]],
+      tiles: [["1", "open task"], ["33m", "tracked today"], ["9", "design pins decided"], ["v4.0.2", "shipped"]],
+      goals: [
+        ["v4.1: Sage daily-note weave", 35, "before October", "retention over features - the vow"],
+        ["Projects tab", 15, "sketching", "one tab, grouped sidebar, home not dashboard"],
+        ["Home server migration", 100, "done Sep 9", "laptop serves everything, phone retired"]
+      ],
+      tasks: [["📐 Projects tab: dashboard design", "if energy · today"]],
+      today: [["09:15-09:41", "Projects Dashboard work", "26m"], ["12:21-12:28", "Projects Dashboard work", "7m"]],
+      notes: [
+        ["Project page = home: one-line About + single-focus Now + derived views", "today"],
+        ["Life vs Projects split decided - one tab, grouped sidebar", "today"],
+        ["Goals per-project for direction; Second Brain lesson: depth killed usage", "today"]
+      ]
+    },
+    personal: {
+      name: "Personal", client: "Self", status: "Active",
+      about: "Life admin under Self - rituals, health, the person himself.",
+      now: "Protect the mornings.",
+      tiles: [["3", "open tasks"], ["2h 19m", "tracked today"], ["6h 30m", "last night's sleep"], ["guilty · E3", "first mood check-in, 16:09"]],
+      goals: [["Resume morning walks", 0, "this week", "mental health boost + the DSA loop"]],
+      tasks: [["🪪 Update Aadhaar card", "rolls to tomorrow · call dad"], ["🚶 Morning Walk", "habit · 0/5"], ["🌙 Sleep", "nightly"]],
+      today: [["07:31-08:28", "🧺🚿🍵🍞 Morning Ritual", "57m"], ["09:02-09:15", "📋 Plan of the Day", "12m"], ["11:56-12:21", "🍳 Brunch", "25m"], ["16:49-17:34", "🍛 Lunch (with Starfleet Academy)", "45m"]],
+      notes: [
+        ["Protect the mornings - routine ends with breakfast, on time", "today"],
+        ["YT storm named honestly; exit strategy parked in back of mind", "today"],
+        ["Resume morning walks - the Patternarium loop", "today"]
+      ]
+    },
+    finance: {
+      name: "Finance", client: "Self", status: "Active",
+      about: "Money as a section of life: filings, planning, the ideas files.",
+      now: "ITR: filed and e-verified. Done is done and dusted.",
+      tiles: [["✓", "ITR filed 21:17"], ["-5,000", "late fee (owed anyway)"], ["22m", "it actually took"], ["💸", "money log born today"]],
+      goals: [["File ITR", 100, "done Sep 10, 21:17", "one tutorial + might-as-well; 11h of dread, 22m of doing"]],
+      tasks: [["🧾 File ITR ✓", "completed 21:17"]],
+      today: [["20:55-21:17", "🧾 File ITR", "22m"]],
+      notes: [
+        ["Aditya trip: bail out, or say the budget honestly - front of mind", "today"],
+        ["Daily expenses now live in each day's journal (dummy v0)", "today"]
+      ]
+    },
+    kerala: {
+      name: "Kerala", client: "Travel", status: "Active",
+      about: "Sep 15-24 with Manish: Vagamon, Alleppey, Varkala, trains both ways.",
+      now: "Booked. Pickup from Manish's home by Saturday.",
+      pulse: "<b>departs in 4 days</b> · 13,905 committed · packing 0/8",
+      expenses: { total: "-13,905", rows: [["-2,341", "MMT stay, Varkala", "split pending"], ["-2,579", "MMT stay, Vagamon", "split pending"]], more: 3 },
+      tiles: [["13,905", "paid so far (INR)"], ["2,738", "Manish's half, pending"], ["5", "days to departure"], ["12:30am", "return, Sep 24"]],
+      goals: [],
+      tasks: [["🌴 Kerala Trip - money log", "5 entries · splits settle after"]],
+      today: [],
+      notes: [
+        ["Trains 8,428 (Sep 4) · bus 557 (Sep 5) · stays 4,920 (Sep 6)", "money log"],
+        ["Each spend journaled on the day it happened", "today"]
+      ]
+    },
+    pno: {
+      name: "P&O Support", client: "Work", status: "Active",
+      about: "The office. Six years this November 2.",
+      now: "Standups and support - and the Switch question, growing.",
+      tiles: [["22m", "tracked today"], ["Nov 2", "6-year mark"]],
+      goals: [],
+      tasks: [],
+      today: [["13:04-13:26", "🏢 Standup", "22m"]],
+      notes: [["'Why can't I, in my career, do the same?' - the morning capture", "today"]]
+    },
+    chores: {
+      name: "Chores", client: "Responsibility", status: "Active",
+      about: "What the house is owed - errands, upkeep, showing up.",
+      now: "Kerala prep: pickup from Manish by Saturday.",
+      tiles: [["2", "open tasks"], ["2h 14m", "tracked today"], ["Sat 12", "next deadline"], ["2x", "laundry assists for mom"]],
+      goals: [],
+      tasks: [["📦 Get things from Manish's home", "due Sat 12"], ["🌞 Rise and Shine", "daily ritual"]],
+      today: [["06:01-07:21", "🌞 Rise and Shine", "1h 19m"], ["14:22-14:37", "🧺 Helping with Laundry", "15m"], ["16:09-16:49", "🧺 Helping with Laundry", "40m"]],
+      notes: [["Kerala trip Sep 15-24 with Manish: Vagamon, Alleppey, Varkala", "today"]]
+    },
+    procureflow: {
+      name: "ProcureFlow", client: null, status: "Active",
+      about: "Collaboration project.", now: "Quiet this week.",
+      tiles: [["0", "open tasks"], ["0h", "tracked today"], ["Sep 8", "last commit"]],
+      goals: [], tasks: [], today: [], notes: []
+    },
+    carrerkit: {
+      name: "CarrerKit", client: null, status: "Active",
+      about: "Career tooling experiment.", now: "At the one-month edge.",
+      tiles: [["0", "open tasks"], ["0h", "tracked today"], ["Aug 20", "last commit"]],
+      goals: [], tasks: [], today: [], notes: []
+    },
+    patternarium: {
+      name: "Patternarium", client: null, status: "On hold", hold: true,
+      about: "DSA patterns, collected - born from the walk-and-solve routine.",
+      now: "Sleeping since June. Wakes when the walks do.",
+      tiles: [["Jun 14", "last commit"], ["arrays+", "how far it got"], ["walks", "its revival trigger"]],
+      goals: [], tasks: [], today: [],
+      notes: [["'That routine is the reason I built Patternarium' - 10 Sep, morning", "today"]]
+    },
+    doppel: {
+      name: "doppel", client: null, status: "On hold", hold: true,
+      about: "A personality-driven chatbot widget - the digital self, embeddable.",
+      now: "Its chat-route pattern lives on inside Sage.",
+      tiles: [["May 28", "last commit"], ["1", "descendant: Sage"]],
+      goals: [], tasks: [], today: [], notes: []
+    },
+    phonectl: {
+      name: "phonectl", client: null, status: "On hold", hold: true,
+      about: "Bash CLI for running an Android phone as a headless home server. On npm.",
+      now: "Its router map carried yesterday's DHCP fix.",
+      tiles: [["May 25", "last commit"], ["npm", "distributed"]],
+      goals: [], tasks: [], today: [], notes: []
+    },
+    argonaut: {
+      name: "Argonaut", client: null, status: "On hold", hold: true,
+      about: "The life-RPG experiment: realms, daily notes, an always-on activity tracker.",
+      now: "Its tracker never stopped - 131K samples and counting, feeding today's validation layer.",
+      tiles: [["Jun 12", "last commit"], ["131K", "tracker samples"], ["3 mo", "of window titles"]],
+      goals: [], tasks: [], today: [],
+      notes: [["Tracker rediscovered running 10 Sep - the sensor half of activity inference", "today"]]
+    },
+    mazerunner: {
+      name: "Maze Runner", client: null, status: "On hold", hold: true,
+      about: "Game project, with its own UI repo.", now: "Paused mid-June.",
+      tiles: [["Jun 15", "last commit"]], goals: [], tasks: [], today: [], notes: []
+    },
+    tasklogbiz: {
+      name: "Tasklog Business", client: null, status: "On hold", hold: true,
+      about: "The business-facing sibling of Tasklog, deck and all.", now: "Waiting on the main line.",
+      tiles: [["Jun 12", "last commit"]], goals: [], tasks: [], today: [], notes: []
+    },
+    morehold: {
+      name: "On hold - the rest", client: null, status: "On hold", hold: true,
+      about: "dr-dota, PKM Clipper, prompt-library, trace-annotator, Threadpuller, Dotnetarium, the blog.",
+      now: "All in the Project Ledger with dates; any of them one sentence from revival.",
+      tiles: [["7", "projects"], ["Apr-Jul", "last activity range"]],
+      goals: [], tasks: [], today: [], notes: []
+    }
+  };
+  function render(key) {
+    const d = DATA[key];
+    document.getElementById("pane").innerHTML = `
+      <div class="phead">
+        <h1>${d.name}</h1>
+        ${d.client ? `<span class="chip">client: ${d.client}</span>` : ""}
+        <span class="chip ${d.hold ? "hold" : "active"}">${d.status}</span>
+        ${d.hold ? `<button class="cfgbtn" style="margin-left:auto">Revive</button>` : `<span class="pin" style="margin-left:auto">2</span>`}
+      </div>
+      ${d.about ? `<p style="color:#52525b;font-size:14px;max-width:64ch;margin:10px 0 2px">${d.about} <span class="pin" style="width:15px;height:15px;font-size:10px">6</span></p>` : ""}
+      ${d.now ? `<p style="font-size:14px;max-width:64ch;margin:6px 0 0"><strong style="font-family:'Space Grotesk',sans-serif;font-size:12px;letter-spacing:0.06em;color:#71717A">NOW&nbsp;&nbsp;</strong>${d.now}</p>` : ""}
+      ${d.pulse ? `<p class="pulse">${d.pulse}</p>` : ""}
+      ${d.chapters ? `<details class="chapters"><summary>previous chapters (${d.chapters.length})</summary>${d.chapters.map(ch => `<div><b>${ch[0]}</b> - ${ch[1]}</div>`).join("")}</details>` : ""}
+      <div class="tiles">${d.tiles.map(t => `<div class="tile"><div class="v">${t[0]}</div><div class="k">${t[1]}</div></div>`).join("")}</div>
+      <div class="twocol">
+        <div>
+          <div class="sec"><h2>Goals &amp; milestones <span class="pin">3</span> <span class="pin">8</span></h2>
+            ${d.goals.length ? d.goals.map((g, gi) => `
+              <div class="goal" role="button" tabindex="0" data-g="${gi}" style="cursor:pointer">${g[0]}<span class="goalbar"><i style="width:${g[1]}%"></i></span><span class="pct">${g[1]}%</span></div>`).join("") : `<div style="color:#71717A;font-size:13.5px">${d.hold ? "On-hold projects keep their goals frozen, not erased." : "No goals yet - say one out loud and it exists."}</div>`}
+          </div>
+          <div class="sec"><h2>Open tasks</h2>
+            ${d.tasks.length ? d.tasks.map(t => `<div class="task"><span class="cb"></span>${t[0]}<span class="meta due">${t[1]}</span></div>`).join("") : `<div style="color:#71717A;font-size:13.5px">Nothing open here.</div>`}
+          </div>
+        </div>
+        <div>
+          <div class="sec"><h2>Today <span class="pin">4</span></h2>
+            ${d.today.length ? d.today.map(e => `<div class="entry"><span class="tm">${e[0]}</span>${e[1]}<span class="dur">${e[2]}</span></div>`).join("") : `<div style="color:#71717A;font-size:13.5px">No time tracked here today.</div>`}
+          </div>
+          ${d.expenses ? `<div class="sec"><h2>💸 Expenses <span class="pin">9</span></h2>
+            ${d.expenses.rows.map(x => `<div class="entry"><span style="font-variant-numeric:tabular-nums;font-weight:500;width:64px;text-align:right">${x[0]}</span>${x[1]}<span class="dur">${x[2]}</span></div>`).join("")}
+            <div class="entry" style="border-bottom:0"><span style="width:64px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${d.expenses.total}</span><span style="color:#71717A">total committed</span><button class="cfgbtn" style="margin-left:auto">View all (${d.expenses.rows.length + d.expenses.more})</button></div>
+          </div>` : ""}
+          <div class="sec"><h2>Notes &amp; mentions <span class="pin">7</span></h2>
+            ${d.notes.length ? d.notes.slice(0, 2).map((n, ni) => `<div class="task" style="font-size:13.5px"><span class="notelink" data-n="${ni}">${n[0]}</span><span class="meta">${n[1]}</span></div>`).join("") + (d.notes.length > 2 ? `<button class="cfgbtn" style="margin-top:8px">View all (${d.notes.length})</button>` : "") : `<div style="color:#71717A;font-size:13.5px">Journal lines that mention this project gather here on their own.</div>`}
+          </div>
+        </div>
+      </div>`;
+  }
+  let curKey = "tasklog";
+  function openModal(html) {
+    const ov = document.createElement("div");
+    ov.className = "overlay";
+    ov.innerHTML = `<div class="modal">${html}</div>`;
+    ov.addEventListener("click", e => {
+      if (e.target === ov) { ov.remove(); return; }
+      const v = e.target.closest(".cv");
+      if (v && window._mindRow) {
+        const row = window._mindRow;
+        if (v.dataset.v === "done") { row.style.color = "#15803d"; row.querySelector(".meta").textContent = "closed ✓"; }
+        if (v.dataset.v === "roll") { row.querySelector(".meta").textContent = "→ tomorrow"; }
+        if (v.dataset.v === "letgo") { row.style.textDecoration = "line-through"; row.style.color = "#a1a1aa"; row.querySelector(".meta").textContent = "let go"; }
+        window._mindRow = null;
+        ov.remove();
+      }
+    });
+    document.body.appendChild(ov);
+  }
+  const NOTEBODIES = {
+    default: `<p>A note is its own entity - markdown at the core, Obsidian-equivalent. What you saw in the journal or in a mentions panel was only its link phrase.</p><p>It can be long, have headings, link other notes by [[title]], and belong to several places at once (a day, a project, a person).</p>`,
+  };
+  document.querySelectorAll("aside h3.area").forEach(h => h.addEventListener("click", () => {
+    openModal(`<h3>Life</h3><div class="mmeta">Area · holds clients Self and Responsibility · 3 projects</div>
+      <div class="mbody"><p><strong>The why:</strong> The parts of me that are owed care - self, house, family. Never finishes, only holds.</p></div>
+      <div class="mrow"><span>Color</span>warm green</div>
+      <div class="mrow"><span>Clients inside</span>Self, Responsibility</div>
+      <div class="mfoot"><button class="cfgbtn">Edit why</button><button class="cfgbtn">Reorder projects</button></div>`);
+  }));
+  document.getElementById("newbtn").addEventListener("click", () => {
+    const c = document.getElementById("composer");
+    c.hidden = !c.hidden;
+  });
+  const COMBOS = {
+    area: ["Life", "Travel", "Work", "Switch", "Projects"],
+    client: ["Self", "Responsibility", "Work", "Travel", "Switch"],
+  };
+  function renderCombo(kind, filter) {
+    const list = document.querySelector(`#combo-${kind} .opts`);
+    const f = (filter || "").toLowerCase();
+    const hits = COMBOS[kind].filter(x => x.toLowerCase().includes(f));
+    list.innerHTML = hits.map(x => `<div class="opt" data-pick="${x}" data-kind="${kind}">${x}</div>`).join("")
+      + (filter && !hits.some(x => x.toLowerCase() === f) ? `<div class="opt newrow" data-pick="${filter}" data-kind="${kind}">+ Create "${filter}"</div>` : "");
+  }
+  document.querySelectorAll(".chip.combo").forEach(ch => ch.addEventListener("click", () => {
+    const kind = ch.dataset.combo;
+    const box = document.getElementById("combo-" + kind);
+    document.querySelectorAll(".combolist").forEach(b => { if (b !== box) b.hidden = true; });
+    box.hidden = !box.hidden;
+    if (!box.hidden) { renderCombo(kind, ""); box.querySelector("input").focus(); }
+  }));
+  document.querySelectorAll(".combolist input").forEach(inp => inp.addEventListener("input", () => renderCombo(inp.dataset.for, inp.value)));
+  document.getElementById("composer").addEventListener("click", e => {
+    const opt = e.target.closest(".opt[data-pick]");
+    if (opt) {
+      document.getElementById("chip-" + opt.dataset.kind).textContent = `${opt.dataset.kind}: ${opt.dataset.pick} ▾`;
+      document.getElementById("combo-" + opt.dataset.kind).hidden = true;
+    }
+  });
+  document.getElementById("pane").addEventListener("click", e => {
+    const row = e.target.closest(".goal[data-g]");
+    if (row) {
+      const g = DATA[curKey].goals[row.dataset.g];
+      openModal(`<h3>${g[0]}</h3>
+        <div class="mmeta">Goal · ${DATA[curKey].name} · <span class="chip" style="font-size:11px">3M</span> timespan</div>
+        <div class="mbody"><p><strong>Why:</strong> ${g[3] || "not said yet - Sage fills this from conversation, never asks a form"}</p></div>
+        <div class="mrow"><span>Progress</span>
+          <span style="display:flex;align-items:center;gap:8px;color:inherit">
+            <span class="goalbar" style="width:140px"><i style="width:${g[1]}%"></i></span> ${g[1]}%
+            <button class="cfgbtn" title="evidence lags reality sometimes">nudge</button>
+          </span></div>
+        <div class="mrow"><span>Derived from</span>linked tasks + tracked time (change source)</div>
+        <div class="mrow"><span>Target</span>${g[2] || "not set"}</div>
+        <div class="mrow"><span>Expectations</span>current: ${g[3] || "not set"}<br><span style="font-size:12px">Sep 10 - "sketching" · archived</span></div>
+        <div class="mrow"><span>Smallest door</span>a 5-minute action, always current - "open the mockup, read one pin"</div>
+        <div class="mfoot"><button class="cfgbtn">Edit</button><button class="cfgbtn">Revise expectation</button><button class="cfgbtn">Link a task</button><button class="cfgbtn">Change door</button></div>`);
+      return;
+    }
+    const nl = e.target.closest(".notelink[data-n]");
+    if (nl) {
+      const n = DATA[curKey].notes[nl.dataset.n];
+      openModal(`<h3>${n[0]}</h3><div class="mmeta">Note · born in the journal, ${n[1]} · linked: ${DATA[curKey].name}</div>
+        <div class="mbody">${NOTEBODIES.default}</div>
+        <div class="mfoot"><button class="cfgbtn">Open in Journal</button><button class="cfgbtn">Edit</button><button class="cfgbtn">Links (2)</button></div>`);
+    }
+  });
+  document.querySelectorAll(".proj[data-p]").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".proj").forEach(x => x.classList.remove("sel"));
+    b.classList.add("sel");
+    curKey = b.dataset.p;
+    render(b.dataset.p);
+  }));
+  document.getElementById("tab-journal").addEventListener("click", e => {
+    if (e.target.id === "railtoggle") {
+      const g = document.getElementById("jgrid");
+      g.classList.toggle("norail");
+      e.target.textContent = g.classList.contains("norail") ? "⏱ show the day" : "⏱ hide the day";
+      return;
+    }
+    const mi = e.target.closest(".mindable");
+    if (mi) {
+      const txt = mi.childNodes[0].textContent;
+      window._mindRow = mi;
+      openModal(`<h3>${txt}</h3><div class="mmeta">Mind item · details and status live here</div>
+        <div class="mbody"><p style="color:#a1a1aa">Add a detail, a next step, or just give it a verdict:</p></div>
+        <div class="mfoot">
+          <button class="cfgbtn cv" data-v="done">✓ close it</button>
+          <button class="cfgbtn cv" data-v="roll">→ tomorrow</button>
+          <button class="cfgbtn cv" data-v="letgo">✕ let go</button>
+          <button class="cfgbtn">Add detail</button>
+        </div>`);
+      return;
+    }
+
+    const d = e.target.closest(".destiny");
+    if (d) openModal(`<h3>The thought, as its entity</h3><div class="mmeta">${d.dataset.d} · born in today's dump</div><div class="mbody"><p>The one-liner in the dump was the link phrase. This is the ${d.dataset.d} itself - full markdown, about-links, its own life. Verbatim original kept alongside the cleaned version.</p></div><div class="mfoot"><button class="cfgbtn">Edit</button><button class="cfgbtn">Open origin</button></div>`);
+  });
+  document.getElementById("tab-profile").addEventListener("click", e => {
+    const p = e.target.closest(".plink");
+    if (!p) return;
+    if (p.dataset.person === "deepika") {
+      openModal(`<h3>Deepika</h3><div class="mmeta">Person · friend · in the profile since 10 Sep · everything below hand- or AI-editable</div>
+        <div class="mbody"><p><strong>Who she is to me:</strong> deeply admired for her strength through hard times. The living proof the Switch is doable - "she did it, I just want to do it for myself."</p></div>
+        <div class="mrow"><span>Last contact</span>today, 18:26 - 20 min call. Solid, fun, felt good to connect ✓</div>
+        <div class="mrow"><span>Rhythm</span>~monthly · Sage nudges when the gap stretches past it</div>
+        <div class="mrow"><span>Dates</span>birthday: not captured yet - Sage asks casually, once, someday</div>
+        <div class="mrow"><span>Next time</span>ask how the new job is settling in (6-month journey, landed this year)</div>
+        <div class="mrow"><span>Memories</span>the layoff-to-job story (Mar-Sep 2025) · "hardly any offs"</div>
+        <div class="mrow"><span>Linked</span>Switch (area) · 3 mentions · 1 completed task</div>
+        <div class="mfoot"><button class="cfgbtn">Edit</button><button class="cfgbtn">Add a thread</button><button class="cfgbtn">Mentions (3)</button></div>`);
+    } else if (p.dataset.person === "manish") {
+      openModal(`<h3>Manish</h3><div class="mmeta">Person · friend, co-traveler, collaborator · everything below hand- or AI-editable</div>
+        <div class="mbody"><p><strong>Who he is to me:</strong> the Kerala partner and the ProcureFlow other half - the friend life currently runs through.</p></div>
+        <div class="mrow"><span>Open threads</span>pickup from his home by Saturday · ProcureFlow update pending</div>
+        <div class="mrow"><span>Money</span>owes ~2,738 (bus + both stays) · settles after the trip</div>
+        <div class="mrow"><span>Shared</span>Kerala Sep 15-24 (Vagamon, Alleppey, Varkala) · ProcureFlow</div>
+        <div class="mrow"><span>Advice given</span>cap + sunglasses for the beach days</div>
+        <div class="mrow"><span>Linked</span>Travel (area) · 2 tasks · 5 expenses · 6 mentions</div>
+        <div class="mfoot"><button class="cfgbtn">Edit</button><button class="cfgbtn">Settle up</button><button class="cfgbtn">Mentions (6)</button></div>`);
+    } else if (p.dataset.mem) {
+      openModal(`<h3>Nov 2 marks six years at the job</h3><div class="mmeta">Memory · about: Work, Switch · saved 11 Sep</div>
+        <div class="mbody"><p>Joined November 2. This year makes six. The tenure that frames the whole Switch question - "this should be the third company by now."</p><p><em>Resurfaces:</em> around Nov 2, and whenever the Switch goal is discussed.</p></div>
+        <div class="mfoot"><button class="cfgbtn">Edit</button><button class="cfgbtn">Open origin (journal, Sep 11)</button></div>`);
+    }
+  });
+  document.querySelectorAll("nav a[data-tab]").forEach(a => a.addEventListener("click", e => {
+    e.preventDefault();
+    document.querySelectorAll("nav a").forEach(x => x.classList.remove("active"));
+    a.classList.add("active");
+    document.getElementById("tab-tasks").hidden = a.dataset.tab !== "tasks";
+    document.getElementById("tab-journal").hidden = a.dataset.tab !== "journal";
+    document.getElementById("tab-profile").hidden = a.dataset.tab !== "profile";
+    document.getElementById("tab-projects").style.display = a.dataset.tab === "projects" ? "" : "none";
+  }));
+  render("tasklog");
+</script>

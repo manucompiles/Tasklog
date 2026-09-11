@@ -35,7 +35,8 @@ namespace Tasklog.Api.Controllers
             return Ok(checkins.Select(Project).ToList());
         }
 
-        // POST /api/mood-checkins  { words: string[], energy: 0-10, mocLevel?, checkinAt? }
+        // POST /api/mood-checkins  { words: string[], energy?: 0-10, mocLevel?, checkinAt? }
+        // Energy optional since v4.1 - spoken check-ins carry words, rarely numbers.
         // checkinAt defaults to now (backfilling a missed morning is allowed).
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] MoodCheckinRequest request)
@@ -95,5 +96,5 @@ namespace Tasklog.Api.Controllers
         };
     }
 
-    public record MoodCheckinRequest(string[]? Words, int Energy, int? MocLevel, DateTime? CheckinAt);
+    public record MoodCheckinRequest(string[]? Words, int? Energy, int? MocLevel, DateTime? CheckinAt);
 }

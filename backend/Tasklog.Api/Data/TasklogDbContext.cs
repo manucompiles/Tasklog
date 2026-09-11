@@ -21,6 +21,8 @@ namespace Tasklog.Api.Data
         public DbSet<CompanionSession> CompanionSessions => Set<CompanionSession>();
         public DbSet<Capture> Captures => Set<Capture>();
         public DbSet<Embedding> Embeddings => Set<Embedding>();
+        public DbSet<Note> Notes => Set<Note>();
+        public DbSet<Expense> Expenses => Set<Expense>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -132,6 +134,23 @@ namespace Tasklog.Api.Data
                 .OnDelete(DeleteBehavior.SetNull);
             modelBuilder.Entity<Capture>().HasIndex(c => c.SessionId);
             modelBuilder.Entity<Capture>().HasIndex(c => c.Status);
+
+            // Notes (v4.1): the markdown entity of the type system. Kind is filtered on
+            // every typed view (memories, wishes...); OriginDate joins a note to its
+            // journal day.
+            modelBuilder.Entity<Note>().HasIndex(n => n.Kind);
+            modelBuilder.Entity<Note>().HasIndex(n => n.OriginDate);
+
+            // Expenses (v4.1): day-matched into the journal (OccurredOn scan) and rolled
+            // up per project. Deleting a project keeps its money history (the #86
+            // keep-history rule) - the FK just goes null.
+            modelBuilder.Entity<Expense>()
+                .HasOne(x => x.Project)
+                .WithMany()
+                .HasForeignKey(x => x.ProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<Expense>().HasIndex(x => x.OccurredOn);
+            modelBuilder.Entity<Expense>().HasIndex(x => x.ProjectId);
 
             // Embeddings (#87): one vector per entity per model. The unique composite key
             // makes embed-on-write an upsert, and a model swap writes new rows instead of
