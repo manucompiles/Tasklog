@@ -694,7 +694,7 @@ export interface MoodCheckinDto {
   id: number;
   checkinAt: string; // local ISO datetime
   words: string[];
-  energy: number; // 0-10
+  energy: number | null; // 0-10; null when the words came without a number (v4.1)
   mocLevel: number | null;
 }
 
@@ -825,14 +825,29 @@ export interface CompanionSessionDto {
   updatedAt: string;
 }
 
-// A staged proposal in the Capture inbox. v4.0 payloads are task-shaped.
+// A row in the Capture inbox. v4.0 staged proposals; v4.1 (#92) rows are mostly
+// RECEIPTS - Sage writes autonomously and the row is the audit/undo record.
+// Payload shape depends on type (task/mood/thought/note/expense/time).
 export interface CaptureDto {
   id: number;
-  type: string; // "task" in v4.0
+  type: string;
   status: "proposed" | "confirmed" | "dismissed";
   source: string;
   sessionId: number | null;
-  payload: { title?: string; projectId?: number; newProjectName?: string; deadline?: string };
+  payload: {
+    title?: string; projectId?: number; newProjectName?: string; deadline?: string;
+    // mood
+    words?: string[]; energy?: number;
+    // thought
+    kind?: string; bodyMd?: string; source?: string;
+    // expense
+    amount?: number; direction?: string; note?: string; occurredOn?: string;
+    split?: { with?: string; share?: number; settled?: boolean };
+    // time
+    op?: string; description?: string; startedAt?: string; endedAt?: string;
+    // weave
+    date?: string; sections?: Record<string, unknown>;
+  };
   span: string | null;
   confidence: number | null;
   confirmedType: string | null;

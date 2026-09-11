@@ -42,6 +42,7 @@ import {
 } from "@/lib/companion/meta";
 import CompanionCalendar from "./CompanionCalendar";
 import ProposalCard from "./ProposalCard";
+import ReceiptChip from "./ReceiptChip";
 import CardsPanel from "./CardsPanel";
 
 // ---------- small shared bits ----------
@@ -72,6 +73,9 @@ function timeLabel(iso: string): string {
 type TurnEvent =
   | { type: "text_delta"; text: string }
   | { type: "card"; capture: CaptureDto }
+  // v4.1 (#92): a receipt - the autonomous writers already acted; the chip is
+  // an edit/undo affordance, never an approval ask.
+  | { type: "receipt"; capture: CaptureDto; entity?: unknown }
   | { type: "done"; sdkSessionId: string | null; text: string; sessionId?: number }
   | { type: "error"; message: string }
   // ping = instant first byte (#90); queued = this send is waiting its turn
@@ -270,7 +274,7 @@ export default function CompanionClient() {
               acc += event.text;
               sawDelta = true;
               setStreamText(acc);
-            } else if (event.type === "card") {
+            } else if (event.type === "card" || event.type === "receipt") {
               // Upsert by id: Sage can UPDATE a proposed card mid-conversation
               // ("put that in its own project") and it must morph in place.
               setCaptures((prev) =>
@@ -360,6 +364,11 @@ export default function CompanionClient() {
     acting(id, async () => swapCapture((await confirmCapture(id)).capture));
   const toss = (id: number) =>
     acting(id, async () => swapCapture(await dismissCapture(id)));
+
+  // Undo a v4.1 receipt (#92): dismiss on a CONFIRMED capture reverses the
+  // entity server-side, then the chip re-renders struck-through.
+  const undoReceipt = async (id: number) =>
+    swapCapture(await dismissCapture(id));
   const restore = (id: number) =>
     acting(id, async () => swapCapture(await restoreCapture(id)));
   const saveEdit = (id: number, payload: CaptureDto["payload"]) =>
@@ -519,6 +528,15 @@ export default function CompanionClient() {
                   </span>
                 </div>
               </div>
+            ) : item.capture.type !== "task" || item.capture.status === "confirmed" ? (
+              // v4.1 receipts (#92): Sage already acted - render the compact
+              // chip (undo inside), never an approval card. Confirmed task
+              // rows are receipts too under the autonomous flow.
+              <ReceiptChip
+                key={`c-${item.capture.id}`}
+                capture={item.capture}
+                onUndo={undoReceipt}
+              />
             ) : (
               <div key={`c-${item.capture.id}`} className="flex justify-start">
                 <div className="max-w-[85%] w-full sm:w-[85%]">

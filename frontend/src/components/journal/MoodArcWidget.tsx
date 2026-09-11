@@ -87,7 +87,7 @@ export default function MoodArcWidget({
         {points.map((p) => (
           <circle key={p.c.id} cx={p.cx} cy={p.cy} r="4" fill={BAND_COLOR[mocBand(p.c.mocLevel)]}>
             <title>
-              {`${timeOfDayLabel(p.c.checkinAt)} · ${p.c.words.join(", ")} · energy ${p.c.energy}${p.c.mocLevel !== null ? ` · MoC ${p.c.mocLevel}` : ""}`}
+              {`${timeOfDayLabel(p.c.checkinAt)} · ${p.c.words.join(", ")} · energy ${p.c.energy ?? "-"}${p.c.mocLevel !== null ? ` · MoC ${p.c.mocLevel}` : ""}`}
             </title>
           </circle>
         ))}

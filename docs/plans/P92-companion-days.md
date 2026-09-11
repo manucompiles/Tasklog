@@ -1,6 +1,6 @@
 # P92 - The Companion Days (v4.1)
 
-**Overall Progress:** `55%`
+**Overall Progress:** `66%`
 
 ## TLDR
 Sage gains typed capture writers (mood, thought, note, expense, time) flowing
@@ -120,9 +120,11 @@ mockup is the UI spec for this plan; no separate /ui-spec round needed.
         (popup entities), structured expenses section
   - [ ] 🟥 Evening close: in-place verdicts on mind items (D7), auto lines,
         closing thoughts prose
-  - [ ] 🟥 Receipt chips replace proposal cards (D1): compact "Sage did X"
-        affordances in the conversation + on entities - click opens
-        edit / update / delete / undo popover; no approval UI anywhere
+  - [x] 🟩 Receipt chips replace proposal cards (D1): ReceiptChip renders any
+        non-task/confirmed capture as a compact "Sage did X" line with undo
+        (dismiss-on-confirmed reverses the entity); legacy proposed task
+        cards keep ProposalCard. Notes + Expenses got hand-edit CRUD APIs
+        (pin 17).
 
 - [ ] 🟥 **Step 6: Stage A verification + tests** `[sequential]` → depends on: Steps 1-5
   - [ ] 🟥 Writer round-trips against sanitized dogfood corpus samples
