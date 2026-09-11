@@ -61,9 +61,9 @@ public class CapturesControllerTests
         var controller = new CapturesController(context);
 
         var result = await controller.Create(new CaptureRequest(
-            "mood", Payload("""{"words":["ok"]}"""), null, null, null, null));
+            "teleport", Payload("""{"words":["ok"]}"""), null, null, null, null));
 
-        result.Should().BeOfType<BadRequestObjectResult>(); // v4.0 registry = task only
+        result.Should().BeOfType<BadRequestObjectResult>(); // not in the type registry
     }
 
     [Fact]

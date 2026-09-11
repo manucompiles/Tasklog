@@ -108,6 +108,33 @@ namespace Tasklog.Api.Controllers
             return Ok(ProjectEntry(entry));
         }
 
+        // PATCH /api/journal/entries/{templateKey}/{date}/sections  { sections: { key: value } }
+        // Server-side per-section merge (v4.1, D2) - the concurrent-writer answer. The PUT
+        // above replaces the whole content and stays for the tab editor; every OTHER writer
+        // (Sage's weave, the note confirm handler) merges through here so an agent write can
+        // never clobber an open tab's autosave. Semantics by the template's section kind:
+        //   prose   - append with a blank-line separator (set when empty). Value: string.
+        //   mind    - append items. Value: array of { text, cleared?, verdict? }.
+        //   list    - append strings. Value: array of strings.
+        //   plan    - replace (a plan is rebuilt, not accreted). Value: object.
+        //   projects- replace. Value: array.
+        //   evening - shallow-merge provided fields only. Value: object.
+        //   checkins- rejected: derived from MoodCheckins, never written.
+        [HttpPatch("entries/{templateKey}/{date}/sections")]
+        public async Task<IActionResult> MergeSections(string templateKey, DateTime date, [FromBody] JsonElement body)
+        {
+            if (body.ValueKind != JsonValueKind.Object
+                || !body.TryGetProperty("sections", out var sections))
+                return BadRequest(new { message = "Body must be { sections: { ... } } with sections as a JSON object." });
+
+            var result = await Services.JournalSectionMerge.MergeAsync(_context, templateKey, date, sections);
+            if (!result.Ok)
+                return result.Error!.Contains("not found")
+                    ? NotFound(new { message = result.Error })
+                    : BadRequest(new { message = result.Error });
+            return Ok(ProjectEntry(result.Entry!));
+        }
+
         // GET /api/journal/export?date=yyyy-MM-dd - the day's full note as a .md download.
         // The preview pane fetches this too (same renderer output, no second code path).
         [HttpGet("export")]

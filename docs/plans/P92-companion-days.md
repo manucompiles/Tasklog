@@ -1,6 +1,6 @@
 # P92 - The Companion Days (v4.1)
 
-**Overall Progress:** `11%`
+**Overall Progress:** `33%`
 
 ## TLDR
 Sage gains typed capture writers (mood, thought, note, expense, time) flowing
@@ -86,23 +86,23 @@ mockup is the UI spec for this plan; no separate /ui-spec round needed.
   - [x] 🟩 MoodCheckin.Energy -> int? (+ frontend tolerance)
   - [x] 🟩 Migration, EnsureCreated parity, seed untouched
 
-- [ ] 🟥 **Step 2: Captures registry + writers** `[sequential]` → depends on: Step 1
-  - [ ] 🟥 RegisteredTypes += mood, thought, note, expense, time
-  - [ ] 🟥 Per-type payload validation + caps (note 16KB; others 4KB)
-  - [ ] 🟥 Auto-confirm writers (D1): one transactional create+confirm per
+- [x] 🟩 **Step 2: Captures registry + writers** `[sequential]` → depends on: Step 1
+  - [x] 🟩 RegisteredTypes += mood, thought, note, expense, time
+  - [x] 🟩 Per-type payload validation + caps (note 16KB; others 4KB)
+  - [x] 🟩 Auto-confirm writers (D1): one transactional create+confirm per
         type - mood->MoodCheckins, thought->Notes, expense->Expenses,
         time->TimeEntries (start/stop/manual/retro-edit), note->journal
         section merge (D2); task switches to autonomous too
-  - [ ] 🟥 Undo path: dismiss reverses the confirmed entity (per type)
-  - [ ] 🟥 ConfirmedType/ConfirmedId wiring + embedding upsert parity
+  - [x] 🟩 Undo path: dismiss reverses the confirmed entity (per type)
+  - [x] 🟩 ConfirmedType/ConfirmedId wiring + embedding upsert parity
 
-- [ ] 🟨 **Step 3: Journal section-merge endpoint** `[parallel]` → delivers:
+- [x] 🟩 **Step 3: Journal section-merge endpoint** `[parallel]` → delivers:
   PATCH sections with per-kind merge semantics (usable by Step 2's note
   handler and the UI)
-  - [ ] 🟥 Merge semantics per kind (prose/mind/expenses/plan)
-  - [ ] 🟥 Concurrency: last-writer-per-section, 256KB cap preserved
+  - [x] 🟩 Merge semantics per kind (prose/mind/expenses/plan)
+  - [x] 🟩 Concurrency: last-writer-per-section, 256KB cap preserved
 
-- [ ] 🟥 **Step 4: Sage tools + conduct** `[sequential]` → depends on: Step 2
+- [ ] 🟨 **Step 4: Sage tools + conduct** `[sequential]` → depends on: Step 2
   - [ ] 🟥 propose_capture extended: type + typed payload schemas
   - [ ] 🟥 persona.md: the conduct (anti-Socrates rules, morning statement,
         evening ceremony, register matching, invisible receipts language ban)
