@@ -408,14 +408,19 @@ namespace Tasklog.Api.Controllers
             {
                 case "start":
                 {
+                    // The running timer stops at the NEW entry's start, not at "now" -
+                    // a backdated start must not leave the old entry overlapping it
+                    // (the all-night-dinner bug, 12 Sep). Never end before it began.
+                    var startAt = Get("startedAt") ?? now;
                     var running = await _context.TimeEntries.Where(x => x.EndedAt == null).ToListAsync();
-                    foreach (var r in running) r.EndedAt = now;
+                    foreach (var r in running)
+                        r.EndedAt = startAt > r.StartedAt ? startAt : now;
                     var entry = new TimeEntry
                     {
                         TaskId = task?.Id,
                         Description = Desc(),
                         ProjectId = task?.ProjectId,
-                        StartedAt = Get("startedAt") ?? now,
+                        StartedAt = startAt,
                         CreatedAt = now,
                     };
                     _context.TimeEntries.Add(entry);
@@ -437,6 +442,12 @@ namespace Tasklog.Api.Controllers
                     var end = Get("endedAt");
                     if (start is null || end is null || end <= start)
                         return (null, null, "a manual time payload requires ordered startedAt and endedAt.");
+                    // A retro interval trims any running timer it overlaps ("that idle
+                    // time was brunch" must not leave the work timer running through
+                    // the brunch): the running entry ends where the interval begins.
+                    var overlapped = await _context.TimeEntries
+                        .Where(x => x.EndedAt == null && x.StartedAt < start).ToListAsync();
+                    foreach (var r in overlapped) r.EndedAt = start;
                     var entry = new TimeEntry
                     {
                         TaskId = task?.Id,
