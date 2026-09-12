@@ -27,6 +27,7 @@ namespace Tasklog.Api.Data
         public DbSet<Area> Areas => Set<Area>();
         public DbSet<Goal> Goals => Set<Goal>();
         public DbSet<Person> Persons => Set<Person>();
+        public DbSet<ActivitySample> ActivitySamples => Set<ActivitySample>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -173,6 +174,12 @@ namespace Tasklog.Api.Data
                 .HasForeignKey(g => g.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<Goal>().HasIndex(g => g.ProjectId);
+
+            // Activity samples (the tape): (Machine, Ts) unique makes shipping
+            // idempotent - a re-sent batch can never duplicate; Ts is the range-scan key.
+            modelBuilder.Entity<ActivitySample>()
+                .HasIndex(a => new { a.Machine, a.Ts })
+                .IsUnique();
 
             // Profile notes: the active set loads into every Sage conversation.
             modelBuilder.Entity<ProfileNote>().HasIndex(n => n.Active);

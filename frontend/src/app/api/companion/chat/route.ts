@@ -458,6 +458,30 @@ function buildTools(sessionId: number): CompanionTool[] {
       logCapture("note", { ...(date ? { date } : {}), sections }, span),
   };
 
+  const checkScreen: CompanionTool<{
+    from: z.ZodString;
+    to: z.ZodOptional<z.ZodString>;
+    machine: z.ZodOptional<z.ZodString>;
+  }> = {
+    name: "check_screen",
+    description:
+      "THE TAPE: what the user's screen actually showed (active window titles + " +
+      "idle stretches) between two times. ALWAYS call this before backdating or " +
+      "setting any retro time boundary - idle onset is when they left the desk, " +
+      "never guess from message timing. Empty = machine off or watchman down.",
+    schema: {
+      from: z.string().describe("Local ISO datetime, e.g. 2026-09-12T20:00"),
+      to: z.string().optional().describe("Local ISO datetime; default now"),
+      machine: z.string().optional().describe("Default pc"),
+    },
+    handler: async ({ from, to, machine }) => {
+      const params = new URLSearchParams({ from, ...(to ? { to } : {}), machine: machine ?? "pc" });
+      const res = await fetch(`${API}/api/activity/segments?${params}`);
+      if (!res.ok) return { result: { error: `tape unavailable: ${res.status}` } };
+      return { result: await res.json() };
+    },
+  };
+
   const undoCapture: CompanionTool<{ captureId: z.ZodNumber }> = {
     name: "undo_capture",
     description:
@@ -502,7 +526,7 @@ function buildTools(sessionId: number): CompanionTool[] {
   // when the SDK hands back schema-validated args (see provider.ts).
   return [
     findRelevantTasks, logTask, logMood, logThought, logExpense, logTime,
-    weaveJournal, undoCapture, writeProfileNote,
+    weaveJournal, undoCapture, writeProfileNote, checkScreen,
   ] as unknown as CompanionTool[];
 }
 

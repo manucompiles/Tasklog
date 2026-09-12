@@ -1,0 +1,11 @@
+[Unit]
+Description=Tasklog watchman - activity tape sensor + shipper
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/python3 "/home/manu/Personal/Code/Depth Projects/Tasklog/watchman/watchman.py"
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
