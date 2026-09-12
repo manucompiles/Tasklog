@@ -1,6 +1,6 @@
 # P92 - The Companion Days (v4.1)
 
-**Overall Progress:** `83%`
+**Overall Progress:** `67% (Stage A: 100%)`
 
 ## TLDR
 Sage gains typed capture writers (mood, thought, note, expense, time) flowing
@@ -127,10 +127,10 @@ mockup is the UI spec for this plan; no separate /ui-spec round needed.
         cards keep ProposalCard. Notes + Expenses got hand-edit CRUD APIs
         (pin 17).
 
-- [ ] 🟨 **Step 6: Stage A verification + tests** `[sequential]` → depends on: Steps 1-5
-  - [ ] 🟥 Writer round-trips against sanitized dogfood corpus samples
-  - [ ] 🟥 Merge endpoint race test (two concurrent section writes)
-  - [ ] 🟥 Live check on hydramachine via deploy-home.sh
+- [x] 🟩 **Step 6: Stage A verification + tests** `[sequential]` → depends on: Steps 1-5
+  - [x] 🟩 Writer round-trips against corpus samples (word-only mood, split expense day-matched to Sep 4, memory thought with about-links, retro time manual+edit, weave appends, undo per type, structural 400s)
+  - [x] 🟩 Merge race test - FOUND and fixed a real lost-write bug (see Outcomes)
+  - [x] 🟩 Deployed twice; live e2e: Sage autonomously created 'Pack sunscreen' into the Kerala project with the packing deadline, receipt streamed
 
 ### Stage B - after the trip (Sep 24+)
 
@@ -149,5 +149,31 @@ mockup is the UI spec for this plan; no separate /ui-spec round needed.
 - [ ] 🟥 **Step 9: Docs + ship prep** `[sequential]` → depends on: Step 8
   - [ ] 🟥 /document sync, CHANGELOG v4.1.0, review round
 
-## Outcomes
-<!-- filled at execution end -->
+## Outcomes (Stage A, 12 Sep 2026)
+
+What changed vs planned:
+- Journal layout: kept the existing main+widgets structure (it already IS the
+  pin's shape) instead of rebuilding to three columns; added DayTiles,
+  MorningBrief, DailyExpensesSection, NotesTodaySection, mind-item verdicts,
+  and evening auto-lines into it.
+- Step 6 earned its keep twice:
+  1. The merge race test caught concurrent weaves losing whole sections
+     (unique-index 500 on same-day create; read-modify-write lost update on
+     existing days). Fixed with a process-wide merge gate + one retry.
+  2. Live testing exposed that Sage had NO working tools in production, with
+     four stacked causes: SDK MCP tools deferred behind (disabled) ToolSearch
+     -> alwaysLoad; deny-list missed modern harness tools -> options.tools: [];
+     the logged-in CLI's claude.ai connectors leaked into the session ->
+     strictMcpConfig; and zod v4 z.record() schemas silently dropped the whole
+     tool batch in the SDK converter -> described z.any() (backend validates).
+     Bisected via a minimal probe script/route. This predates v4.1 - v4.0's
+     prod tool loop likely never worked on hydramachine.
+- Undo semantics: dismiss-on-confirmed deletes the entity (weaves excepted,
+  edited in the journal instead). Time writer does no grid-snapping (agent
+  writes record what was said).
+- First autonomous production write: task 'Pack sunscreen' -> Kerala project,
+  deadline matched to the packing cutoff, receipt chip streamed. Kept (real).
+Key decisions during execution: allowedTools generated from the tool list
+(auto-approve correct under D1); merge implementation shared as a service so
+HTTP and capture writers cannot diverge; ProfileNotes dedupe by exact text.
+
