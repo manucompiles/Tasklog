@@ -25,7 +25,7 @@ const baseTask: Task = {
 }
 
 const projects: Project[] = [
-  { id: 2, name: 'Work', color: null, clientId: null, client: null, position: 0, createdAt: '2026-03-01T00:00:00Z' },
+  { id: 2, name: 'Work', color: null, clientId: null, client: null, position: 0, createdAt: '2026-03-01T00:00:00Z', status: 'active', areaId: null, area: null, about: null, nowText: null, nowHistoryJson: '[]' },
 ]
 
 function makeProps(overrides: Partial<Parameters<typeof TaskCard>[0]> = {}) {

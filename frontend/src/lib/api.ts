@@ -39,6 +39,22 @@ export interface Project {
   // Manual sidebar sort order (#86); lower = higher in the list.
   position: number;
   createdAt: string; // ISO 8601 datetime string
+  // v4.1 Stage B (#92): the project home fields. status: "active" | "onhold".
+  status: string;
+  areaId: number | null;
+  area: AreaDto | null;
+  about: string | null;
+  nowText: string | null;
+  // JSON array of { at, text } - NOW's archived chapters, newest last.
+  nowHistoryJson: string;
+}
+
+// An AREA (v4.1, pin 11): the broad domain the Projects sidebar groups by.
+export interface AreaDto {
+  id: number;
+  name: string;
+  why: string | null;
+  position: number;
 }
 
 // The shape returned by the API for every label.
@@ -982,5 +998,97 @@ export interface NoteDto {
 export async function getNotesForDay(date: string): Promise<NoteDto[]> {
   const res = await fetch(`${getApiUrl()}/api/notes?date=${date}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to load notes.");
+  return res.json();
+}
+
+// ---------- Areas + Goals (v4.1 Stage B, #92) ----------
+
+export async function getAreas(): Promise<AreaDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/areas`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load areas.");
+  return res.json();
+}
+
+export async function updateArea(id: number, patch: { name?: string; why?: string }): Promise<AreaDto> {
+  const res = await fetch(`${getApiUrl()}/api/areas/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update the area.");
+  return res.json();
+}
+
+// The locked goal entity (design-principles-v4.md): per-project, one-line birth.
+export interface GoalDto {
+  id: number;
+  projectId: number;
+  title: string;
+  why: string | null;
+  timespan: string | null;
+  targetDate: string | null;
+  progress: number;
+  expectationsJson: string; // dated history, newest last
+  door: string | null;
+  status: string; // active | done | parked
+}
+
+export async function getGoals(projectId: number): Promise<GoalDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/goals?projectId=${projectId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load goals.");
+  return res.json();
+}
+
+export async function createGoal(projectId: number, title: string): Promise<GoalDto> {
+  const res = await fetch(`${getApiUrl()}/api/goals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId, title }),
+  });
+  if (!res.ok) throw new Error("Failed to create the goal.");
+  return res.json();
+}
+
+export async function updateGoal(id: number, patch: Partial<{
+  title: string; why: string; timespan: string; targetDate: string;
+  expectation: string; door: string; progress: number; status: string;
+}>): Promise<GoalDto> {
+  const res = await fetch(`${getApiUrl()}/api/goals/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update the goal.");
+  return res.json();
+}
+
+// Create a project from the composer (pin 12): area/client by id or created-on-type.
+export async function createProjectFull(input: {
+  name: string; clientId?: number; areaId?: number; newAreaName?: string;
+}): Promise<Project> {
+  const res = await fetch(`${getApiUrl()}/api/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("Failed to create the project.");
+  return res.json();
+}
+
+export async function updateProjectHome(id: number, patch: {
+  status?: string; areaId?: number | null; about?: string; now?: string;
+}): Promise<Project> {
+  const res = await fetch(`${getApiUrl()}/api/projects/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update the project.");
+  return res.json();
+}
+
+export async function getExpensesForProject(projectId: number): Promise<ExpenseDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/expenses?projectId=${projectId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load expenses.");
   return res.json();
 }

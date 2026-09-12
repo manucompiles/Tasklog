@@ -26,6 +26,7 @@ namespace Tasklog.Api.Controllers
         {
             var projects = await _context.Projects
                 .Include(p => p.Client)
+                .Include(p => p.Area)
                 .OrderBy(p => p.Position)
                 .ThenBy(p => p.Name)
                 .ToListAsync();
