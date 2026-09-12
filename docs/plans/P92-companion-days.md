@@ -1,6 +1,6 @@
 # P92 - The Companion Days (v4.1)
 
-**Overall Progress:** `66%`
+**Overall Progress:** `83%`
 
 ## TLDR
 Sage gains typed capture writers (mood, thought, note, expense, time) flowing
@@ -113,20 +113,21 @@ mockup is the UI spec for this plan; no separate /ui-spec round needed.
         write_profile_note tool, loaded into every conversation; surfaced
         and correctable in the Stage B Profile tab (until then, by chat)
 
-- [ ] 🟨 **Step 5: Journal day page redo** `[UI]` `[sequential]` → depends on:
+- [x] 🟩 **Step 5: Journal day page redo** `[UI]` `[sequential]` → depends on:
   Steps 2-3 (pin 16)
-  - [ ] 🟥 Three-column layout, toggleable day rail, derived tiles
-  - [ ] 🟥 Morning brief section (auto), dump items with destiny links
-        (popup entities), structured expenses section
-  - [ ] 🟥 Evening close: in-place verdicts on mind items (D7), auto lines,
-        closing thoughts prose
+  - [x] 🟩 Derived DayTiles lead the page (existing main+rail layout kept - already the pin's shape; TodaySoFar widget is the rail)
+  - [x] 🟩 MorningBrief (auto: sleep + rollovers), NotesTodaySection (destiny
+        list, note popups per pin 14), DailyExpensesSection (rows + splits +
+        total, optional-everything)
+  - [x] 🟩 Evening close: MindWidget verdicts in place (closed/rolled/letgo,
+        D7), EveningSection opens with auto What Moved / What Came Back
   - [x] 🟩 Receipt chips replace proposal cards (D1): ReceiptChip renders any
         non-task/confirmed capture as a compact "Sage did X" line with undo
         (dismiss-on-confirmed reverses the entity); legacy proposed task
         cards keep ProposalCard. Notes + Expenses got hand-edit CRUD APIs
         (pin 17).
 
-- [ ] 🟥 **Step 6: Stage A verification + tests** `[sequential]` → depends on: Steps 1-5
+- [ ] 🟨 **Step 6: Stage A verification + tests** `[sequential]` → depends on: Steps 1-5
   - [ ] 🟥 Writer round-trips against sanitized dogfood corpus samples
   - [ ] 🟥 Merge endpoint race test (two concurrent section writes)
   - [ ] 🟥 Live check on hydramachine via deploy-home.sh

@@ -940,3 +940,47 @@ export async function restoreCapture(id: number): Promise<CaptureDto> {
   }
   return res.json();
 }
+
+// ---------- Expenses (v4.1, #92) ----------
+
+// A money row (plan D4): day-matched into the journal, rolled up per project.
+export interface ExpenseDto {
+  id: number;
+  amount: number;
+  direction: "out" | "in";
+  occurredOn: string;
+  note: string;
+  splitJson: string; // "{}" when unshared; { with, share, settled } otherwise
+  projectId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// GET /api/expenses?from=&to= - one day's rows when from === to.
+export async function getExpenses(from: string, to: string): Promise<ExpenseDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/expenses?from=${from}&to=${to}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load expenses.");
+  return res.json();
+}
+
+// ---------- Notes (v4.1, #92) ----------
+
+// The markdown entity behind memories/ideas/reflections/quotes/wishes (plan D3).
+export interface NoteDto {
+  id: number;
+  title: string;
+  bodyMd: string;
+  kind: string;
+  aboutJson: string;
+  source: string | null;
+  originDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// GET /api/notes?date= - the day's notes (the mind dump's destiny list).
+export async function getNotesForDay(date: string): Promise<NoteDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/notes?date=${date}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load notes.");
+  return res.json();
+}

@@ -6,7 +6,7 @@
 // tapping one consciously adopts it into today; ignoring it costs nothing tomorrow.
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { ArrowRight, Check, X } from "lucide-react";
 import { MindItem } from "@/lib/journal";
 import SectionCard from "./SectionCard";
 
@@ -29,8 +29,14 @@ export default function MindWidget({ title, items, rolled, onChange }: Props) {
     setDraft("");
   };
 
-  const clear = (text: string) => {
-    onChange(items.map((i) => (i.text === text ? { ...i, cleared: true } : i)));
+  // v4.1 verdicts (#92, plan D7): each open item takes its verdict in place.
+  // closed = done with it; letgo = consciously released (stays struck in the
+  // record); rolled = still open, marked for tomorrow (the existing rollover
+  // derivation carries uncleared items forward).
+  const verdict = (text: string, v: "closed" | "letgo" | "rolled") => {
+    onChange(items.map((i) =>
+      i.text === text ? { ...i, cleared: v !== "rolled", verdict: v } : i,
+    ));
   };
 
   const adopt = (text: string) => {
@@ -46,15 +52,38 @@ export default function MindWidget({ title, items, rolled, onChange }: Props) {
         {open.map((item) => (
           <li key={item.text} className="group flex items-baseline gap-2 py-0.5 text-[0.9rem]">
             <span className="w-1 h-1 rounded-full bg-j-muted shrink-0 translate-y-[-3px]" aria-hidden="true" />
-            <span className="flex-1">{item.text}</span>
-            <button
-              onClick={() => clear(item.text)}
-              aria-label={`Clear "${item.text}" (done with this)`}
-              title="Clear - done with this"
-              className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 text-j-muted hover:text-j-ink p-2 -my-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-j-accent rounded"
-            >
-              <X size={12} aria-hidden="true" />
-            </button>
+            <span className="flex-1">
+              {item.text}
+              {item.verdict === "rolled" && (
+                <span className="ml-1.5 font-mono text-[0.58rem] uppercase text-j-muted">-&gt; tomorrow</span>
+              )}
+            </span>
+            <span className="flex items-center opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100">
+              <button
+                onClick={() => verdict(item.text, "closed")}
+                aria-label={`Close "${item.text}" (done with this)`}
+                title="Closed - done with this"
+                className="text-j-muted hover:text-j-accent p-1.5 -my-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-j-accent rounded"
+              >
+                <Check size={12} aria-hidden="true" />
+              </button>
+              <button
+                onClick={() => verdict(item.text, "rolled")}
+                aria-label={`Roll "${item.text}" to tomorrow`}
+                title="Roll to tomorrow"
+                className="text-j-muted hover:text-j-ink p-1.5 -my-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-j-accent rounded"
+              >
+                <ArrowRight size={12} aria-hidden="true" />
+              </button>
+              <button
+                onClick={() => verdict(item.text, "letgo")}
+                aria-label={`Let go of "${item.text}" (kept in the record, struck)`}
+                title="Let go - consciously released"
+                className="text-j-muted hover:text-j-ink p-1.5 -my-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-j-accent rounded"
+              >
+                <X size={12} aria-hidden="true" />
+              </button>
+            </span>
           </li>
         ))}
         {rolled.map((text) => (
