@@ -337,7 +337,7 @@ function buildTools(sessionId: number): CompanionTool[] {
     title: z.ZodString;
     bodyMd: z.ZodOptional<z.ZodString>;
     kind: z.ZodEnum<{ memory: "memory"; idea: "idea"; reflection: "reflection"; quote: "quote"; wish: "wish"; note: "note" }>;
-    about: z.ZodOptional<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    about: z.ZodOptional<z.ZodArray<z.ZodAny>>;
     source: z.ZodOptional<z.ZodString>;
     span: z.ZodOptional<z.ZodString>;
   }> = {
@@ -351,7 +351,9 @@ function buildTools(sessionId: number): CompanionTool[] {
       title: z.string().min(1).describe("Short link phrase, e.g. 'Nov 2 marks six years at the job'"),
       bodyMd: z.string().optional().describe("Cleaned markdown body, the user's voice intact"),
       kind: z.enum(["memory", "idea", "reflection", "quote", "wish", "note"]),
-      about: z.array(z.record(z.string(), z.unknown())).optional()
+      // z.any over z.record: zod v4 record schemas break the SDK's converter
+      // and silently drop the WHOLE tool batch (#92 bisect). Backend validates.
+      about: z.array(z.any()).optional()
         .describe('About-links, e.g. [{"type":"project","id":2},{"type":"person","name":"Deepika"}]'),
       source: z.string().optional().describe("For reflections/quotes: the book, URL, or person"),
       span: z.string().optional().describe("The user's exact words (short quote)"),
@@ -371,7 +373,7 @@ function buildTools(sessionId: number): CompanionTool[] {
     note: z.ZodString;
     direction: z.ZodOptional<z.ZodEnum<{ out: "out"; in: "in" }>>;
     occurredOn: z.ZodOptional<z.ZodString>;
-    split: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    split: z.ZodOptional<z.ZodAny>;
     projectId: z.ZodOptional<z.ZodNumber>;
     span: z.ZodOptional<z.ZodString>;
   }> = {
@@ -385,8 +387,8 @@ function buildTools(sessionId: number): CompanionTool[] {
       note: z.string().min(1).describe("What it was, in the user's words"),
       direction: z.enum(["out", "in"]).optional().describe("Default out (spent)"),
       occurredOn: z.string().optional().describe("ISO date the money moved; default today"),
-      split: z.record(z.string(), z.unknown()).optional()
-        .describe('e.g. {"with":"Manish","share":1290,"settled":false}'),
+      split: z.any().optional()
+        .describe('Split object, e.g. {"with":"Manish","share":1290,"settled":false}'),
       projectId: z.number().int().positive().optional().describe("The trip/project it belongs to"),
       span: z.string().optional().describe("The user's exact words (short quote)"),
     },
@@ -437,7 +439,7 @@ function buildTools(sessionId: number): CompanionTool[] {
 
   const weaveJournal: CompanionTool<{
     date: z.ZodOptional<z.ZodString>;
-    sections: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    sections: z.ZodAny;
     span: z.ZodOptional<z.ZodString>;
   }> = {
     name: "weave_journal",
@@ -448,8 +450,8 @@ function buildTools(sessionId: number): CompanionTool[] {
       "cleaned prose in the user's voice. Never write the checkins section.",
     schema: {
       date: z.string().optional().describe("ISO date; default today"),
-      sections: z.record(z.string(), z.unknown())
-        .describe('e.g. {"mind_dump":"...", "front_of_mind":[{"text":"...","cleared":false}]}'),
+      sections: z.any()
+        .describe('REQUIRED object keyed by section, e.g. {"mind_dump":"...", "front_of_mind":[{"text":"...","cleared":false}]}'),
       span: z.string().optional().describe("The user's exact words (short quote)"),
     },
     handler: async ({ date, sections, span }) =>

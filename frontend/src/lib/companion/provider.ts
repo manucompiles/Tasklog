@@ -71,6 +71,9 @@ export class ClaudeCodeProvider implements CompanionProvider {
     const server = createSdkMcpServer({
       name: "companion",
       version: "1.0.0",
+      // Without this the SDK defers MCP tools behind ToolSearch (which the
+      // companion disables below) - the writers must live in the prompt itself.
+      alwaysLoad: true,
       tools: input.tools.map((t) =>
         tool(t.name, t.description, t.schema, async (args) => {
           const { result, event } = await t.handler(
@@ -95,15 +98,19 @@ export class ClaudeCodeProvider implements CompanionProvider {
         includePartialMessages: true,
         permissionMode: "default",
         mcpServers: { companion: server },
-        // The companion is a conversation, not an agent loose in the repo: only
-        // our own tools are reachable, everything else is denied outright.
-        // NOTE deliberately NO allowedTools list - bare entries there auto-approve
-        // before canUseTool is consulted (the SDK's CAN_USE_TOOL_SHADOWED warning);
-        // our mcp__companion__* tools fall through to canUseTool below instead.
-        disallowedTools: [
-          "Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch",
-          "WebSearch", "Task", "TodoWrite", "NotebookEdit", "AskUserQuestion",
-        ],
+        // The companion is a conversation, not an agent loose in the repo:
+        // tools: [] removes the ENTIRE built-in toolset (the old deny-list
+        // approach missed modern harness names, and a "*" deny removed even our
+        // own MCP tools - both found live, 12 Sep). allowedTools auto-approves
+        // the writers, which is exactly right: they are AUTONOMOUS (plan D1),
+        // there is no approval step left to shadow.
+        tools: [],
+        allowedTools: input.tools.map((t) => `mcp__companion__${t.name}`),
+        // The user's claude.ai connectors (Tasklog/Spotify/Drive) leak in from
+        // the logged-in CLI config otherwise - an intimate journal must not see
+        // them. strict = only the mcpServers passed right here exist.
+        strictMcpConfig: true,
+        // Belt over braces: anything unexpected is denied at call time.
         canUseTool: async (toolName, toolInput) =>
           toolName.startsWith("mcp__companion__")
             ? { behavior: "allow", updatedInput: toolInput }
