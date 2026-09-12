@@ -46,6 +46,26 @@ namespace Tasklog.Api.Controllers
             if (request.ClientId is int cid && !await _context.Clients.AnyAsync(c => c.Id == cid))
                 return BadRequest(new { message = $"Client {cid} not found." });
 
+            // Area (v4.1, pin 12): pick an existing one by id, or create-on-type by
+            // name (the composer's search-or-create combobox) - born from use.
+            int? areaId = request.AreaId;
+            if (areaId is int aid && !await _context.Areas.AnyAsync(a => a.Id == aid))
+                return BadRequest(new { message = $"Area {aid} not found." });
+            if (areaId is null && !string.IsNullOrWhiteSpace(request.NewAreaName))
+            {
+                var areaName = request.NewAreaName.Trim();
+                var area = (await _context.Areas.ToListAsync())
+                    .FirstOrDefault(a => string.Equals(a.Name, areaName, StringComparison.OrdinalIgnoreCase));
+                if (area is null)
+                {
+                    var maxAreaPos = await _context.Areas.AnyAsync() ? await _context.Areas.MaxAsync(a => a.Position) : 0;
+                    area = new Area { Name = areaName, Position = maxAreaPos + 1, CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now };
+                    _context.Areas.Add(area);
+                    await _context.SaveChangesAsync();
+                }
+                areaId = area.Id;
+            }
+
             var maxPosition = await _context.Projects
                 .Select(p => (int?)p.Position)
                 .MaxAsync() ?? -1;
@@ -55,6 +75,7 @@ namespace Tasklog.Api.Controllers
                 Name = request.Name.Trim(),
                 Color = request.Color,
                 ClientId = request.ClientId,
+                AreaId = areaId,
                 Position = maxPosition + 1,
                 CreatedAt = DateTime.UtcNow
             };
@@ -114,8 +135,52 @@ namespace Tasklog.Api.Controllers
                 }
             }
 
+            if (body.TryGetProperty("areaId", out var areaEl))
+            {
+                if (areaEl.ValueKind == JsonValueKind.Null)
+                    project.AreaId = null;
+                else if (areaEl.ValueKind == JsonValueKind.Number && areaEl.TryGetInt32(out var aid2))
+                {
+                    if (!await _context.Areas.AnyAsync(a => a.Id == aid2))
+                        return BadRequest(new { message = $"Area {aid2} not found." });
+                    project.AreaId = aid2;
+                }
+                else return BadRequest(new { message = "areaId must be an integer or null." });
+            }
+
+            if (body.TryGetProperty("status", out var statusEl))
+            {
+                var status = statusEl.GetString();
+                if (status is not ("active" or "onhold"))
+                    return BadRequest(new { message = "status must be 'active' or 'onhold'." });
+                project.Status = status;
+            }
+
+            if (body.TryGetProperty("about", out var aboutEl))
+                project.About = aboutEl.ValueKind == JsonValueKind.String
+                    ? aboutEl.GetString() : null;
+
+            // NOW is append-only (pin 13): setting a new Now archives the old one as
+            // a dated chapter instead of overwriting it.
+            if (body.TryGetProperty("now", out var nowEl))
+            {
+                var newNow = nowEl.ValueKind == JsonValueKind.String ? nowEl.GetString() : null;
+                if (!string.IsNullOrWhiteSpace(project.NowText) && project.NowText != newNow)
+                {
+                    var history = System.Text.Json.Nodes.JsonNode.Parse(project.NowHistoryJson)!.AsArray();
+                    history.Add(new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["at"] = DateTime.Now.ToString("yyyy-MM-dd"),
+                        ["text"] = project.NowText,
+                    });
+                    project.NowHistoryJson = history.ToJsonString();
+                }
+                project.NowText = newNow;
+            }
+
             await _context.SaveChangesAsync();
             await _context.Entry(project).Reference(p => p.Client).LoadAsync();
+            await _context.Entry(project).Reference(p => p.Area).LoadAsync();
             return Ok(project);
         }
 
@@ -181,7 +246,7 @@ namespace Tasklog.Api.Controllers
     }
 
     // Request body for project create. Color and clientId are optional.
-    public record ProjectNameRequest(string Name, string? Color = null, int? ClientId = null);
+    public record ProjectNameRequest(string Name, string? Color = null, int? ClientId = null, int? AreaId = null, string? NewAreaName = null);
 
     // Request body for project reorder: the full set of project ids, in the desired order.
     public record ReorderRequest(int[]? OrderedIds);
