@@ -57,25 +57,25 @@ export default function GoalPopup({
       aria-label={goal.title}
     >
       <div
-        className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-white border border-zinc-200 p-5 space-y-4"
+        className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-surface border border-border p-5 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div>
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500">
+          <p className="text-[11px] uppercase tracking-wider text-text-muted">
             goal · {goal.status}
             {goal.timespan ? ` · ${goal.timespan}` : ""}
           </p>
-          <h3 className="font-heading text-lg font-semibold text-zinc-900">{goal.title}</h3>
+          <h3 className="font-heading text-lg font-semibold text-text-primary">{goal.title}</h3>
         </div>
 
         {/* Progress: derived someday, always nudgeable now - the bar must not
             argue when the evidence lags reality. */}
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-2 rounded-full bg-zinc-100 overflow-hidden">
-              <div className="h-full rounded-full bg-blue-600" style={{ width: `${progress}%` }} />
+            <div className="flex-1 h-2 rounded-full bg-surface-raised overflow-hidden">
+              <div className="h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
             </div>
-            <span className="text-sm tabular-nums text-zinc-600 w-10 text-right">{progress}%</span>
+            <span className="text-sm tabular-nums text-text-muted w-10 text-right">{progress}%</span>
           </div>
           <div className="mt-1.5 flex items-center gap-2">
             <input
@@ -84,14 +84,14 @@ export default function GoalPopup({
               max={100}
               value={progress}
               onChange={(e) => setProgress(Number(e.target.value))}
-              className="flex-1 accent-blue-600"
+              className="flex-1 accent-[var(--color-accent,#2563EB)]"
               aria-label="Nudge progress"
             />
             <button
               type="button"
               disabled={busy || progress === goal.progress}
               onClick={() => save({ progress })}
-              className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs text-blue-600 hover:border-blue-600 disabled:opacity-40 cursor-pointer"
+              className="rounded-lg border border-border px-2.5 py-1 text-xs text-accent hover:border-accent disabled:opacity-40 cursor-pointer"
             >
               nudge
             </button>
@@ -99,18 +99,18 @@ export default function GoalPopup({
         </div>
 
         <label className="block text-sm">
-          <span className="text-[11px] uppercase tracking-wider text-zinc-500">Why · one line</span>
+          <span className="text-[11px] uppercase tracking-wider text-text-muted">Why · one line</span>
           <input
             value={why}
             onChange={(e) => setWhy(e.target.value)}
             onBlur={() => why !== (goal.why ?? "") && save({ why })}
             placeholder="never demanded - filled when it wants to be"
-            className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+            className="mt-1 w-full rounded-lg border border-border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </label>
 
         <div className="flex items-center gap-2">
-          <span className="text-[11px] uppercase tracking-wider text-zinc-500">Timespan</span>
+          <span className="text-[11px] uppercase tracking-wider text-text-muted">Timespan</span>
           {TIMESPANS.map((t) => (
             <button
               key={t}
@@ -121,8 +121,8 @@ export default function GoalPopup({
               }}
               className={`rounded-full border px-2 py-0.5 text-xs cursor-pointer ${
                 timespan === t
-                  ? "border-blue-600 text-blue-600 bg-blue-50"
-                  : "border-zinc-200 text-zinc-500 hover:border-zinc-400"
+                  ? "border-accent text-accent bg-surface-raised"
+                  : "border-border text-text-muted hover:border-text-muted"
               }`}
             >
               {t}
@@ -131,10 +131,10 @@ export default function GoalPopup({
         </div>
 
         <div>
-          <span className="text-[11px] uppercase tracking-wider text-zinc-500">Expectation · revisions archive</span>
+          <span className="text-[11px] uppercase tracking-wider text-text-muted">Expectation · revisions archive</span>
           {current && (
-            <p className="text-sm text-zinc-700 mt-0.5">
-              {current.text} <span className="text-xs text-zinc-400">({current.at})</span>
+            <p className="text-sm text-text-primary mt-0.5">
+              {current.text} <span className="text-xs text-text-muted/70">({current.at})</span>
             </p>
           )}
           <div className="mt-1 flex gap-2">
@@ -142,7 +142,7 @@ export default function GoalPopup({
               value={expectation}
               onChange={(e) => setExpectation(e.target.value)}
               placeholder="revise what success looks like…"
-              className="flex-1 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="flex-1 rounded-lg border border-border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <button
               type="button"
@@ -151,16 +151,16 @@ export default function GoalPopup({
                 void save({ expectation: expectation.trim() });
                 setExpectation("");
               }}
-              className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs text-blue-600 hover:border-blue-600 disabled:opacity-40 cursor-pointer"
+              className="rounded-lg border border-border px-2.5 py-1 text-xs text-accent hover:border-accent disabled:opacity-40 cursor-pointer"
             >
               revise
             </button>
           </div>
           {expectations.length > 1 && (
-            <details className="mt-1 text-xs text-zinc-500">
+            <details className="mt-1 text-xs text-text-muted">
               <summary className="cursor-pointer">previous expectations ({expectations.length - 1})</summary>
               {expectations.slice(0, -1).reverse().map((x, i) => (
-                <p key={i} className="mt-0.5 pl-3 border-l-2 border-zinc-200">
+                <p key={i} className="mt-0.5 pl-3 border-l-2 border-border">
                   <b>{x.at}</b> - {x.text}
                 </p>
               ))}
@@ -169,13 +169,13 @@ export default function GoalPopup({
         </div>
 
         <label className="block text-sm">
-          <span className="text-[11px] uppercase tracking-wider text-zinc-500">The smallest door · 5 minutes, never owes completion</span>
+          <span className="text-[11px] uppercase tracking-wider text-text-muted">The smallest door · 5 minutes, never owes completion</span>
           <input
             value={door}
             onChange={(e) => setDoor(e.target.value)}
             onBlur={() => door !== (goal.door ?? "") && save({ door })}
             placeholder="the next 5-minute action"
-            className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+            className="mt-1 w-full rounded-lg border border-border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </label>
 
@@ -185,7 +185,7 @@ export default function GoalPopup({
               type="button"
               disabled={busy}
               onClick={() => save({ status: "done" })}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-green-700 hover:border-green-600 cursor-pointer"
+              className="rounded-lg border border-border px-3 py-1.5 text-xs text-green-700 hover:border-green-600 cursor-pointer"
             >
               done ✓
             </button>
@@ -194,14 +194,14 @@ export default function GoalPopup({
             type="button"
             disabled={busy}
             onClick={() => save({ status: goal.status === "parked" ? "active" : "parked" })}
-            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 hover:border-zinc-400 cursor-pointer"
+            className="rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted hover:border-text-muted cursor-pointer"
           >
             {goal.status === "parked" ? "unpark" : "park"}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="ml-auto rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 hover:text-zinc-900 cursor-pointer"
+            className="ml-auto rounded-lg border border-border px-3 py-1.5 text-xs text-text-muted hover:text-text-primary cursor-pointer"
           >
             close
           </button>

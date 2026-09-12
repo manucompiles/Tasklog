@@ -212,7 +212,7 @@ export default function ProjectsClient() {
     setAreas((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
   };
 
-  if (loading) return <p className="text-sm text-zinc-500 py-10 text-center">opening the projects…</p>;
+  if (loading) return <p className="text-sm text-text-muted py-10 text-center">opening the projects…</p>;
 
   return (
     <div className="lg:flex lg:items-start lg:gap-5">
@@ -227,7 +227,7 @@ export default function ProjectsClient() {
                   type="button"
                   onClick={() => area && void editWhy(area)}
                   title={area?.why ?? undefined}
-                  className={`text-[11px] uppercase tracking-wider text-zinc-500 mb-1 ${area ? "hover:text-zinc-800 cursor-pointer" : "cursor-default"}`}
+                  className={`text-[11px] uppercase tracking-wider text-text-muted mb-1 ${area ? "hover:text-text-primary cursor-pointer" : "cursor-default"}`}
                 >
                   {g.title}{area ? " ▾" : ""}
                 </button>
@@ -239,13 +239,13 @@ export default function ProjectsClient() {
                         onClick={() => setSelectedId(p.id)}
                         className={`w-full text-left flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm cursor-pointer ${
                           p.id === selectedId
-                            ? "bg-blue-50 text-zinc-900 font-medium shadow-[inset_3px_0_0] shadow-blue-600"
-                            : "text-zinc-700 hover:bg-zinc-100"
+                            ? "bg-surface-raised text-text-primary font-medium shadow-[inset_3px_0_0] shadow-accent"
+                            : "text-text-primary hover:bg-surface-raised"
                         }`}
                       >
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color ?? "#a1a1aa" }} />
                         <span className="truncate">{p.name}</span>
-                        {p.client && <span className="ml-auto text-[11px] text-zinc-400">{p.client.name}</span>}
+                        {p.client && <span className="ml-auto text-[11px] text-text-muted/70">{p.client.name}</span>}
                       </button>
                     </li>
                   ))}
@@ -256,7 +256,7 @@ export default function ProjectsClient() {
 
           {onHold.length > 0 && (
             <div className="shrink-0 lg:mb-4">
-              <p className="text-[11px] uppercase tracking-wider text-zinc-400 mb-1">On hold</p>
+              <p className="text-[11px] uppercase tracking-wider text-text-muted/70 mb-1">On hold</p>
               <ul className="flex lg:block gap-1.5">
                 {onHold.map((p) => (
                   <li key={p.id}>
@@ -264,10 +264,10 @@ export default function ProjectsClient() {
                       type="button"
                       onClick={() => setSelectedId(p.id)}
                       className={`w-full text-left flex items-center gap-2 rounded-lg px-2.5 py-1 text-[13px] cursor-pointer ${
-                        p.id === selectedId ? "bg-zinc-100 text-zinc-700" : "text-zinc-400 hover:bg-zinc-50"
+                        p.id === selectedId ? "bg-surface-raised text-text-primary" : "text-text-muted/70 hover:bg-surface-raised"
                       }`}
                     >
-                      <span className="w-2 h-2 rounded-full bg-zinc-300 shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-border shrink-0" />
                       <span className="truncate">{p.name}</span>
                     </button>
                   </li>
@@ -282,12 +282,12 @@ export default function ProjectsClient() {
               <button
                 type="button"
                 onClick={() => setComposing(true)}
-                className="text-sm text-blue-600 hover:underline cursor-pointer"
+                className="text-sm text-accent hover:underline cursor-pointer"
               >
                 + New project
               </button>
             ) : (
-              <div className="rounded-xl border border-blue-600/50 p-2.5 space-y-2 w-60">
+              <div className="rounded-xl border border-accent/50 p-2.5 space-y-2 w-60">
                 <input
                   autoFocus
                   value={npName}
@@ -301,7 +301,7 @@ export default function ProjectsClient() {
                   value={npArea}
                   onChange={(e) => setNpArea(e.target.value)}
                   placeholder="Area · type to search or create"
-                  className="w-full rounded-md border border-zinc-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                  className="w-full rounded-md border border-border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent"
                 />
                 <datalist id="areas-list">
                   {areas.map((a) => <option key={a.id} value={a.name} />)}
@@ -309,15 +309,15 @@ export default function ProjectsClient() {
                 <select
                   value={npClientId}
                   onChange={(e) => setNpClientId(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="w-full rounded-md border border-zinc-200 px-2 py-1 text-xs focus:outline-none"
+                  className="w-full rounded-md border border-border px-2 py-1 text-xs focus:outline-none"
                   aria-label="Client"
                 >
                   <option value="">no client</option>
                   {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => void createProject()} className="rounded-md bg-zinc-900 text-white px-2.5 py-1 text-xs cursor-pointer">Create</button>
-                  <button type="button" onClick={() => setComposing(false)} className="text-xs text-zinc-500 cursor-pointer">cancel</button>
+                  <button type="button" onClick={() => void createProject()} className="rounded-md bg-primary text-white px-2.5 py-1 text-xs cursor-pointer">Create</button>
+                  <button type="button" onClick={() => setComposing(false)} className="text-xs text-text-muted cursor-pointer">cancel</button>
                 </div>
               </div>
             )}
@@ -328,14 +328,14 @@ export default function ProjectsClient() {
       {/* The project home */}
       <main className="flex-1 min-w-0 max-w-2xl">
         {!selected ? (
-          <p className="text-sm text-zinc-500 py-10 text-center">No projects yet - one line up there creates the first.</p>
+          <p className="text-sm text-text-muted py-10 text-center">No projects yet - one line up there creates the first.</p>
         ) : (
           <div className="space-y-5">
             <div>
               <div className="flex items-baseline gap-2.5 flex-wrap">
-                <h1 className="font-heading text-2xl font-semibold text-zinc-900">{selected.name}</h1>
+                <h1 className="font-heading text-2xl font-semibold text-text-primary">{selected.name}</h1>
                 {selected.client && (
-                  <span className="text-xs rounded-full border border-zinc-200 px-2.5 py-0.5 text-zinc-500">
+                  <span className="text-xs rounded-full border border-border px-2.5 py-0.5 text-text-muted">
                     client: {selected.client.name}
                   </span>
                 )}
@@ -349,7 +349,7 @@ export default function ProjectsClient() {
                 <button
                   type="button"
                   onClick={() => void toggleHold()}
-                  className="ml-auto text-xs rounded-lg border border-zinc-200 px-2.5 py-1 text-zinc-600 hover:border-zinc-400 cursor-pointer"
+                  className="ml-auto text-xs rounded-lg border border-border px-2.5 py-1 text-text-muted hover:border-text-muted cursor-pointer"
                 >
                   {selected.status === "onhold" ? "Revive" : "Put on hold"}
                 </button>
@@ -363,21 +363,21 @@ export default function ProjectsClient() {
                   onChange={(e) => setDraft(e.target.value)}
                   onBlur={() => void saveAbout()}
                   onKeyDown={(e) => e.key === "Enter" && void saveAbout()}
-                  className="mt-2 w-full text-sm text-zinc-600 border-b border-blue-600 focus:outline-none pb-0.5"
+                  className="mt-2 w-full text-sm text-text-muted border-b border-accent focus:outline-none pb-0.5"
                 />
               ) : (
                 <p
-                  className="mt-2 text-sm text-zinc-600 cursor-text"
+                  className="mt-2 text-sm text-text-muted cursor-text"
                   onClick={() => { setDraft(selected.about ?? ""); setEditingAbout(true); }}
                   title="click to edit"
                 >
-                  {selected.about ?? <span className="text-zinc-400">what is this place? one line, click to write it</span>}
+                  {selected.about ?? <span className="text-text-muted/70">what is this place? one line, click to write it</span>}
                 </p>
               )}
 
               {/* NOW: one focus; old Nows archive as chapters (pin 13). */}
               <div className="mt-1.5 text-sm">
-                <span className="font-heading text-[11px] tracking-wider text-zinc-400">NOW&nbsp;&nbsp;</span>
+                <span className="font-heading text-[11px] tracking-wider text-text-muted/70">NOW&nbsp;&nbsp;</span>
                 {editingNow ? (
                   <input
                     autoFocus
@@ -385,24 +385,24 @@ export default function ProjectsClient() {
                     onChange={(e) => setDraft(e.target.value)}
                     onBlur={() => void saveNow()}
                     onKeyDown={(e) => e.key === "Enter" && void saveNow()}
-                    className="w-3/4 text-sm border-b border-blue-600 focus:outline-none pb-0.5"
+                    className="w-3/4 text-sm border-b border-accent focus:outline-none pb-0.5"
                   />
                 ) : (
                   <span
-                    className="cursor-text text-zinc-800"
+                    className="cursor-text text-text-primary"
                     onClick={() => { setDraft(selected.nowText ?? ""); setEditingNow(true); }}
                     title="click to edit - the old Now archives as a chapter"
                   >
-                    {selected.nowText ?? <span className="text-zinc-400">the current chapter, click to start it</span>}
+                    {selected.nowText ?? <span className="text-text-muted/70">the current chapter, click to start it</span>}
                   </span>
                 )}
               </div>
-              <p className="mt-1.5 text-xs tabular-nums text-zinc-500">{pulse}</p>
+              <p className="mt-1.5 text-xs tabular-nums text-text-muted">{pulse}</p>
               {chapters.length > 0 && (
-                <details className="mt-1 text-xs text-zinc-500">
+                <details className="mt-1 text-xs text-text-muted">
                   <summary className="cursor-pointer">previous chapters ({chapters.length})</summary>
                   {chapters.slice().reverse().map((ch, i) => (
-                    <p key={i} className="mt-0.5 pl-3 border-l-2 border-zinc-200"><b>{ch.at}</b> - {ch.text}</p>
+                    <p key={i} className="mt-0.5 pl-3 border-l-2 border-border"><b>{ch.at}</b> - {ch.text}</p>
                   ))}
                 </details>
               )}
@@ -410,20 +410,20 @@ export default function ProjectsClient() {
 
             {/* Goals: born from one line, opened as popups (pins 3+8). */}
             <section>
-              <h2 className="font-heading text-sm font-semibold text-zinc-900 mb-1.5">Goals &amp; milestones</h2>
+              <h2 className="font-heading text-sm font-semibold text-text-primary mb-1.5">Goals &amp; milestones</h2>
               {goals.filter((g) => g.status !== "parked").map((g) => (
                 <button
                   key={g.id}
                   type="button"
                   onClick={() => setOpenGoal(g)}
-                  className="w-full flex items-center gap-3 py-1.5 border-b border-zinc-100 text-sm text-left cursor-pointer hover:bg-zinc-50"
+                  className="w-full flex items-center gap-3 py-1.5 border-b border-border text-sm text-left cursor-pointer hover:bg-surface-raised"
                 >
-                  <span className={`flex-1 truncate ${g.status === "done" ? "line-through text-zinc-400" : "text-zinc-800"}`}>{g.title}</span>
-                  {g.timespan && <span className="text-[11px] text-zinc-400">{g.timespan}</span>}
-                  <span className="w-24 h-1.5 rounded-full bg-zinc-100 overflow-hidden shrink-0">
-                    <span className="block h-full rounded-full bg-blue-600" style={{ width: `${g.progress}%` }} />
+                  <span className={`flex-1 truncate ${g.status === "done" ? "line-through text-text-muted/70" : "text-text-primary"}`}>{g.title}</span>
+                  {g.timespan && <span className="text-[11px] text-text-muted/70">{g.timespan}</span>}
+                  <span className="w-24 h-1.5 rounded-full bg-surface-raised overflow-hidden shrink-0">
+                    <span className="block h-full rounded-full bg-accent" style={{ width: `${g.progress}%` }} />
                   </span>
-                  <span className="w-9 text-right text-xs tabular-nums text-zinc-500">{g.progress}%</span>
+                  <span className="w-9 text-right text-xs tabular-nums text-text-muted">{g.progress}%</span>
                 </button>
               ))}
               <input
@@ -431,18 +431,18 @@ export default function ProjectsClient() {
                 onChange={(e) => setGoalDraft(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && void addGoal()}
                 placeholder="+ say a goal out loud and it exists"
-                className="mt-1 w-full text-sm text-zinc-700 placeholder:text-zinc-400 py-1 focus:outline-none"
+                className="mt-1 w-full text-sm text-text-primary placeholder:text-text-muted/70 py-1 focus:outline-none"
               />
             </section>
 
             {/* Optional sections - they appear only when life produced them. */}
             {openTasks.length > 0 && (
               <section>
-                <h2 className="font-heading text-sm font-semibold text-zinc-900 mb-1.5">Open tasks</h2>
+                <h2 className="font-heading text-sm font-semibold text-text-primary mb-1.5">Open tasks</h2>
                 {openTasks.map((t) => (
-                  <div key={t.id} className="flex items-center gap-2.5 py-1.5 border-b border-zinc-100 text-sm">
-                    <span className="w-4 h-4 rounded border border-zinc-300 shrink-0" />
-                    <span className="flex-1 truncate text-zinc-800">{t.title}</span>
+                  <div key={t.id} className="flex items-center gap-2.5 py-1.5 border-b border-border text-sm">
+                    <span className="w-4 h-4 rounded border border-border shrink-0" />
+                    <span className="flex-1 truncate text-text-primary">{t.title}</span>
                     {t.deadline && <span className="text-xs text-amber-700">{t.deadline.slice(0, 10)}</span>}
                   </div>
                 ))}
@@ -451,14 +451,14 @@ export default function ProjectsClient() {
 
             {projectEntriesToday.length > 0 && (
               <section>
-                <h2 className="font-heading text-sm font-semibold text-zinc-900 mb-1.5">Today</h2>
+                <h2 className="font-heading text-sm font-semibold text-text-primary mb-1.5">Today</h2>
                 {projectEntriesToday.map((e) => (
-                  <div key={e.id} className="flex items-baseline gap-3 py-1 text-sm border-b border-zinc-100">
-                    <span className="text-xs tabular-nums text-zinc-400 w-24 shrink-0">
+                  <div key={e.id} className="flex items-baseline gap-3 py-1 text-sm border-b border-border">
+                    <span className="text-xs tabular-nums text-text-muted/70 w-24 shrink-0">
                       {e.startedAt.slice(11, 16)}-{e.endedAt ? e.endedAt.slice(11, 16) : "now"}
                     </span>
-                    <span className="flex-1 truncate text-zinc-700">{e.taskTitle || e.description}</span>
-                    <span className="text-xs tabular-nums text-zinc-400">{hm(e.durationSeconds)}</span>
+                    <span className="flex-1 truncate text-text-primary">{e.taskTitle || e.description}</span>
+                    <span className="text-xs tabular-nums text-text-muted/70">{hm(e.durationSeconds)}</span>
                   </div>
                 ))}
               </section>
@@ -466,31 +466,31 @@ export default function ProjectsClient() {
 
             {expenses.length > 0 && (
               <section>
-                <h2 className="font-heading text-sm font-semibold text-zinc-900 mb-1.5">💸 Expenses</h2>
+                <h2 className="font-heading text-sm font-semibold text-text-primary mb-1.5">💸 Expenses</h2>
                 {expenses.slice(0, 4).map((x) => (
-                  <div key={x.id} className="flex items-baseline gap-3 py-1 text-sm border-b border-zinc-100">
-                    <span className="w-20 shrink-0 text-right tabular-nums text-zinc-800">
+                  <div key={x.id} className="flex items-baseline gap-3 py-1 text-sm border-b border-border">
+                    <span className="w-20 shrink-0 text-right tabular-nums text-text-primary">
                       {x.direction === "in" ? "+" : "-"}{x.amount.toLocaleString("en-IN")}
                     </span>
-                    <span className="flex-1 truncate text-zinc-700">{x.note}</span>
-                    <span className="text-[11px] text-zinc-400">{x.occurredOn.slice(0, 10)}</span>
+                    <span className="flex-1 truncate text-text-primary">{x.note}</span>
+                    <span className="text-[11px] text-text-muted/70">{x.occurredOn.slice(0, 10)}</span>
                   </div>
                 ))}
                 <p className="flex items-baseline gap-3 pt-1.5 text-sm">
-                  <span className="w-20 shrink-0 text-right font-semibold tabular-nums text-zinc-900">
+                  <span className="w-20 shrink-0 text-right font-semibold tabular-nums text-text-primary">
                     -{expenses.reduce((s, x) => s + (x.direction === "in" ? -x.amount : x.amount), 0).toLocaleString("en-IN")}
                   </span>
-                  <span className="text-zinc-500">total on this project</span>
+                  <span className="text-text-muted">total on this project</span>
                 </p>
               </section>
             )}
 
             {mentions.length > 0 && (
               <section>
-                <h2 className="font-heading text-sm font-semibold text-zinc-900 mb-1.5">Notes &amp; mentions</h2>
+                <h2 className="font-heading text-sm font-semibold text-text-primary mb-1.5">Notes &amp; mentions</h2>
                 {mentions.slice(0, 2).map((n) => (
-                  <p key={n.id} className="py-1 text-sm text-zinc-700 border-b border-zinc-100">
-                    {n.title} <span className="text-[11px] text-zinc-400">· {n.kind}</span>
+                  <p key={n.id} className="py-1 text-sm text-text-primary border-b border-border">
+                    {n.title} <span className="text-[11px] text-text-muted/70">· {n.kind}</span>
                   </p>
                 ))}
               </section>
