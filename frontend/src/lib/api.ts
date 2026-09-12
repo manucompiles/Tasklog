@@ -1092,3 +1092,78 @@ export async function getExpensesForProject(projectId: number): Promise<ExpenseD
   if (!res.ok) throw new Error("Failed to load expenses.");
   return res.json();
 }
+
+// ---------- Persons + Profile (v4.1 Stage B, #92) ----------
+
+// A person (pin 17): deep entity, born from a mention, everything correctable.
+export interface PersonDto {
+  id: number;
+  name: string;
+  relation: string | null;
+  whoTheyAre: string | null;
+  rhythmDays: number | null;
+  lastContactAt: string | null;
+  birthday: string | null;
+  threadsJson: string; // JSON string[]
+  nextTime: string | null;
+}
+
+export async function getPersons(): Promise<PersonDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/persons`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load people.");
+  return res.json();
+}
+
+export async function updatePerson(id: number, patch: Partial<{
+  name: string; relation: string; whoTheyAre: string; rhythmDays: number;
+  lastContactAt: string; birthday: string; nextTime: string; threads: string[];
+}>): Promise<PersonDto> {
+  const res = await fetch(`${getApiUrl()}/api/persons/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update the person.");
+  return res.json();
+}
+
+export async function createPerson(name: string, relation?: string): Promise<PersonDto> {
+  const res = await fetch(`${getApiUrl()}/api/persons`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, ...(relation ? { relation } : {}) }),
+  });
+  if (!res.ok) throw new Error("Failed to create the person.");
+  return res.json();
+}
+
+// Sage's worn note sheet (What Sage Knows) - the transparency contract.
+export interface ProfileNoteDto {
+  id: number;
+  text: string;
+  kind: string;
+  sourceDate: string;
+  active: boolean;
+}
+
+export async function getProfileNotes(): Promise<ProfileNoteDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/profile-notes`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load the note sheet.");
+  return res.json();
+}
+
+export async function retireProfileNote(id: number): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/api/profile-notes/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ active: false }),
+  });
+  if (!res.ok) throw new Error("Failed to retire the line.");
+}
+
+// Typed note views (memories, wishes...) for the Profile tab.
+export async function getNotesByKind(kind: string): Promise<NoteDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/notes?kind=${kind}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load notes.");
+  return res.json();
+}

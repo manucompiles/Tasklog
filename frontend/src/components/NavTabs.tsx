@@ -14,6 +14,7 @@ const TABS = [
   { href: "/journal", label: "Journal", isActive: (p: string) => p.startsWith("/journal") },
   { href: "/companion", label: "Sage", isActive: (p: string) => p.startsWith("/companion") },
   { href: "/projects", label: "Projects", isActive: (p: string) => p.startsWith("/projects") },
+  { href: "/profile", label: "Profile", isActive: (p: string) => p.startsWith("/profile") },
 ];
 
 export default function NavTabs() {

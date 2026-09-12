@@ -26,6 +26,7 @@ namespace Tasklog.Api.Data
         public DbSet<ProfileNote> ProfileNotes => Set<ProfileNote>();
         public DbSet<Area> Areas => Set<Area>();
         public DbSet<Goal> Goals => Set<Goal>();
+        public DbSet<Person> Persons => Set<Person>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
