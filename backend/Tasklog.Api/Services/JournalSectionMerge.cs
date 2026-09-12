@@ -14,7 +14,35 @@ namespace Tasklog.Api.Services
     {
         public sealed record MergeResult(bool Ok, string? Error, JournalEntry? Entry);
 
+        // Merges are serialized process-wide: two concurrent weaves both read-modify-
+        // write the whole ContentJson, so without the gate the second SaveChanges wins
+        // and silently drops the first one's sections (and two creates of the same day
+        // race the unique (TemplateId, EntryDate) index into a 500 - both found by the
+        // Step 6 race test). One API process, sub-ms merges: a semaphore is the honest
+        // simple fix; the PUT endpoint stays outside it by design (wholesale replace).
+        private static readonly SemaphoreSlim Gate = new(1, 1);
+
         public static async Task<MergeResult> MergeAsync(
+            TasklogDbContext context, string templateKey, DateTime date, JsonElement sections)
+        {
+            await Gate.WaitAsync();
+            try
+            {
+                return await MergeLockedAsync(context, templateKey, date, sections);
+            }
+            catch (DbUpdateException)
+            {
+                // A same-moment PUT created the day first: reload and merge once more.
+                context.ChangeTracker.Clear();
+                return await MergeLockedAsync(context, templateKey, date, sections);
+            }
+            finally
+            {
+                Gate.Release();
+            }
+        }
+
+        private static async Task<MergeResult> MergeLockedAsync(
             TasklogDbContext context, string templateKey, DateTime date, JsonElement sections)
         {
             var template = await context.JournalTemplates.FirstOrDefaultAsync(t => t.Key == templateKey);
