@@ -1,6 +1,6 @@
 # P92 - The Companion Days (v4.1)
 
-**Overall Progress:** `67% (Stage A: 100%)`
+**Overall Progress:** `89% (Stages A+B built; Step 9 docs/ship remain)`
 
 ## TLDR
 Sage gains typed capture writers (mood, thought, note, expense, time) flowing
@@ -132,19 +132,21 @@ mockup is the UI spec for this plan; no separate /ui-spec round needed.
   - [x] 🟩 Merge race test - FOUND and fixed a real lost-write bug (see Outcomes)
   - [x] 🟩 Deployed twice; live e2e: Sage autonomously created 'Pack sunscreen' into the Kerala project with the packing deadline, receipt streamed
 
-### Stage B - after the trip (Sep 24+)
+### Stage B - pulled forward by user request (built 12 Sep)
 
-- [ ] 🟥 **Step 7: Schema B + Projects tab** `[sequential]` → depends on: Stage A
-  - [ ] 🟥 Project.Status (active/on-hold) + Area entity (Name, Why) +
-        area-grouped sidebar; composer with search-or-create comboboxes
-  - [ ] 🟥 Project home per pins 1-13 (About/Now+chapters, pulse, goals
-        popups, optional expenses panel, Revive)
+- [x] 🟩 **Step 7: Schema B + Projects tab** `[sequential]` → depends on: Stage A
+  - [x] 🟩 Project.Status + Area entity (get-or-create, why) + Goal entity
+        (locked spec) + Project About/Now(+chapters); area-grouped sidebar;
+        composer with datalist search-or-create area
+  - [x] 🟩 Project home per pins 1-13 (About/Now hand-editable, chapters,
+        pulse, goal popups with nudge/revisions/door, optional sections,
+        on-hold + Revive)
 
-- [ ] 🟥 **Step 8: People + Profile tab** `[UI]` `[sequential]` → depends on: Step 7
-  - [ ] 🟥 Person entity (relation, rhythm, dates, threads, memories links,
-        splits) per pin 17, popup-first
-  - [ ] 🟥 Profile tab per pin 15: identities (derived, read-only v1), areas
-        + whys, What Sage Knows (correctable), people, memories, wishes
+- [x] 🟩 **Step 8: People + Profile tab** `[UI]` `[sequential]` → depends on: Step 7
+  - [x] 🟩 Person entity (relation, who-they-are, rhythm, birthday slot,
+        threads, next-time; get-or-create by mention), popup-first
+  - [x] 🟩 Profile tab per pin 15: where-the-week-went (evidence v1), areas
+        + whys, What Sage Knows with retire-X, people, memories, wishes
 
 - [ ] 🟥 **Step 9: Docs + ship prep** `[sequential]` → depends on: Step 8
   - [ ] 🟥 /document sync, CHANGELOG v4.1.0, review round
