@@ -11,11 +11,13 @@
 # Usage (from repo root):  ./scripts/deploy-home.sh
 #
 # Override host via env if the address changes:
-#   HOME_HOST=hydra@192.168.1.49 ./scripts/deploy-home.sh
+#   HOME_HOST=hydra@192.168.1.50 ./scripts/deploy-home.sh
+# Default is the domain: it carries A records for both the ethernet (.49) and
+# wifi (.50) reservations, so it works in either connectivity scenario.
 
 set -euo pipefail
 
-HOST="${HOME_HOST:-hydra@192.168.1.49}"
+HOST="${HOME_HOST:-hydra@tasklog.home.manudubey.in}"
 # Empty default = relative same-origin API calls. Caddy on :80 routes /api/*
 # to the backend (companion/doppel stay on Next), so ANY hostname the server
 # is reached by (IP, tasklog.home, Tailscale) works without a rebuild.
