@@ -2,6 +2,70 @@
 
 ---
 
+## v4.1.0 - The companion days
+*September 2026*
+
+Sage graduates from proposing to DOING. Born from a two-day live dogfood (the corpus of
+everything one person actually throws at a companion), built around one law: engage with
+the content first, capture invisibly. Plan: `docs/plans/P92-companion-days.md` (#92).
+
+### Added
+
+- **Sage acts on what he hears** - no more approval cards. Narration becomes real rows
+  directly: tasks, moods, thoughts, expenses (with informal splits like "Manish owes
+  1,369"), notes, journal prose, and time entries. Every write shows a small **receipt
+  chip** with one-tap **undo** (the trust loop moved from pre-approval to post-hoc undo).
+  Mood energy is logged ONLY when you say a number - Sage never invents one.
+- **Honest time from narration** - "dinner routine now", "that was from 22:05", "I napped
+  after brunch": Sage starts, stops, backdates, and edits timers. Timers can never
+  overlap: starting a new one seals the running one at the NEW start, and a retro
+  interval trims any running timer it crosses.
+- **The tape** - a tiny `watchman` agent per machine ships active-window titles + idle
+  state to the server (titles only, never contents; nothing leaves the LAN; the local
+  spool absorbs server sleep). Sage's `check_screen` tool reads coalesced segments and
+  MUST consult them before backdating any boundary - evidence over guessed times. v1
+  alerts: a desktop popup when YouTube exceeds its budget in a rolling window.
+- **The journal day page, redone** - morning brief (sleep + yesterday's rollovers), day
+  tiles, a structured expenses section with split chips and a daily total, note popups,
+  mind verdicts (closed / rolled over / let go), and evening auto-lines for what moved.
+  Sage weaves prose into sections through a server-side merge that never loses concurrent
+  writes.
+- **Projects tab** - projects grouped by **life areas** (each with its why), status
+  active/on-hold, an About, and an append-only **Now** chapter history. **Goals** live on
+  projects: a timespan tier (10Y..1M), a why, nudgeable progress, dated expectation
+  revisions, and **the door** - the smallest next physical action.
+- **Profile tab** - **people as entities**: relation, who they are, contact rhythm,
+  birthday, open threads ("owes ~2,738"), and "next time, bring up X". Plus the ledger of
+  **profile notes** - durable facts Sage learns about you, injected into every
+  conversation; stale facts retire, never delete.
+- **Sage knows your day before the first word** - today's journal state, time entries,
+  and expenses ride along in his context, alongside the profile notes.
+
+### Fixed
+
+- **Sage had no tools in production** - four stacked causes in the Agent SDK wiring
+  (deferred tool loading, built-in tool leakage, claude.ai connector leakage, and a zod
+  v4 `z.record()` schema silently dropping the whole tool batch). Sage's tool cage is now
+  explicit and allow-listed.
+- **Concurrent journal writes lost sections** - the merge endpoint is serialized with a
+  retry; three simultaneous writers all survive.
+
+### Notes
+
+- New tables: `Notes`, `Expenses`, `ProfileNotes`, `Areas`, `Goals`, `Persons`,
+  `ActivitySamples` (unique per machine+timestamp - reshipping is always safe).
+  `Projects` gains status/area/about/now-history; `MoodCheckins.Energy` is now nullable.
+  Five migrations, applied on startup.
+- `POST /api/captures` gains `autoConfirm` (create + confirm in one transaction - the
+  capture row is the receipt); dismiss on a confirmed capture = undo (journal weaves
+  refuse: merged prose is edited in the Journal instead).
+- New endpoint families: `/api/notes`, `/api/expenses`, `/api/profile-notes`,
+  `/api/areas`, `/api/goals`, `/api/persons`, `/api/activity` (batch + segments), and
+  `PATCH /api/journal/entries/{key}/{date}/sections` (per-kind section merge).
+- The `watchman/` folder holds the agent + its systemd user service and README.
+
+---
+
 ## v4.0.2 - Crossing messages: the texting model
 *September 2026*
 
