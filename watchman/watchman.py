@@ -23,6 +23,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from datetime import datetime
 
@@ -134,27 +135,70 @@ def ship(cfg):
     if not os.path.exists(SPOOL):
         return
     cursor = read_cursor()
-    with open(SPOOL) as f:
+    with open(SPOOL, errors="replace") as f:
         lines = f.read().splitlines()
     pending = lines[cursor:]
     if not pending:
+        rotate_spool(lines, cursor)
         return
-    # Batches of 1000; stop at the first failure (server asleep) - the cursor
-    # only advances past what the server acknowledged.
+    # Batches of 1000; stop at the first CONNECTIVITY failure (server asleep) -
+    # the cursor only advances past what the server acknowledged. A line that
+    # does not parse (unclean shutdown mid-append, #93) is skipped, never
+    # retried: one poison line must not jam the shipper forever. A 4xx response
+    # means the server REJECTED the chunk - retrying cannot help, so the chunk
+    # is parked in a quarantine file and the cursor moves on.
     for i in range(0, len(pending), 1000):
-        chunk = [json.loads(l) for l in pending[i:i + 1000]]
-        body = json.dumps({"machine": cfg["machine"], "samples": chunk}).encode()
-        req = urllib.request.Request(
-            cfg["server"].rstrip("/") + "/api/activity/batch",
-            data=body, headers={"Content-Type": "application/json"},
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=10) as res:
-                if res.status != 200:
-                    return
-        except Exception:
-            return  # server unreachable (asleep) - the spool waits
-        write_cursor(cursor + i + len(chunk))
+        raw = pending[i:i + 1000]
+        chunk, skipped = [], 0
+        for l in raw:
+            try:
+                chunk.append(json.loads(l))
+            except ValueError:
+                skipped += 1
+        if skipped:
+            print(f"watchman: skipped {skipped} undecodable spool line(s)", flush=True)
+        if chunk:
+            body = json.dumps({"machine": cfg["machine"], "samples": chunk}).encode()
+            req = urllib.request.Request(
+                cfg["server"].rstrip("/") + "/api/activity/batch",
+                data=body, headers={"Content-Type": "application/json"},
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=10) as res:
+                    if res.status != 200:
+                        return
+            except urllib.error.HTTPError as e:
+                if 400 <= e.code < 500:
+                    quarantine(raw, e.code)
+                else:
+                    return  # 5xx: server unhealthy - the spool waits
+            except Exception:
+                return  # server unreachable (asleep) - the spool waits
+        write_cursor(cursor + i + len(raw))
+    with open(SPOOL, errors="replace") as f:
+        rotate_spool(f.read().splitlines(), read_cursor())
+
+
+def quarantine(raw_lines, code):
+    path = os.path.join(STATE_DIR, "quarantine.jsonl")
+    with open(path, "a") as f:
+        f.write(f'{{"rejected": {code}, "at": "{datetime.now():%Y-%m-%dT%H:%M:%S}"}}\n')
+        for l in raw_lines:
+            f.write(l + "\n")
+    print(f"watchman: server rejected a chunk ({code}); parked in quarantine", flush=True)
+
+
+def rotate_spool(lines, cursor):
+    """Once everything is acked, drop the acked prefix so the spool (re-read
+    every ship cycle) does not grow forever (#93 / review R18)."""
+    if cursor < len(lines) or cursor < 20000:
+        return
+    tmp = SPOOL + ".tmp"
+    with open(tmp, "w") as f:
+        pass  # fully acked: nothing to carry over
+    os.replace(tmp, SPOOL)
+    write_cursor(0)
+    print(f"watchman: rotated spool ({cursor} acked lines dropped)", flush=True)
 
 
 # ---- alerts (v1) ----
