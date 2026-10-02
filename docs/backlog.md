@@ -81,6 +81,7 @@ Recently completed work (keep last 10):
 
 | # | Title | Type | Closed |
 |---|-------|------|--------|
+| #93 | Watchman spool resilience (v4.1.1) - poison lines, 4xx quarantine, rotation | bug | 2026-10-02 |
 | #92 | The companion days (v4.1.0) - autonomous Sage, the tape, Projects + Profile tabs | feature | 2026-10-02 |
 | #87 | Sage, the journaling companion (v4.0.0) - opens the Living Profile line | feature | 2026-09-07 |
 | #86 | Flexible time tracking: Client level + task-free entries (v3.2.0) | feature | 2026-09-02 |
