@@ -22,7 +22,7 @@ What is currently being planned or built:
 
 | Plan file | Issue | Branch | Status |
 |-----------|-------|--------|--------|
-| P92-companion-days.md | #92 | feature/sage-daily-note-#92 | In Progress |
+| (none) | - | - | - |
 
 ---
 
@@ -81,6 +81,7 @@ Recently completed work (keep last 10):
 
 | # | Title | Type | Closed |
 |---|-------|------|--------|
+| #92 | The companion days (v4.1.0) - autonomous Sage, the tape, Projects + Profile tabs | feature | 2026-10-02 |
 | #87 | Sage, the journaling companion (v4.0.0) - opens the Living Profile line | feature | 2026-09-07 |
 | #86 | Flexible time tracking: Client level + task-free entries (v3.2.0) | feature | 2026-09-02 |
 | #85 | Journal QoL (wheel drill-down + task sheet) | improvement | 2026-07-08 |
