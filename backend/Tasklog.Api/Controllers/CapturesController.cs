@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tasklog.Api.Data;
@@ -89,6 +90,10 @@ namespace Tasklog.Api.Controllers
             var structural = ValidateStructure(request.Type, request.Payload);
             if (structural is not null)
                 return BadRequest(new { message = structural });
+            // "_undo" is where the writers record how to reverse themselves (review R1);
+            // a caller-supplied one could make Dismiss touch entries it never wrote.
+            if (request.Payload.TryGetProperty("_undo", out _))
+                return BadRequest(new { message = "payload key '_undo' is reserved." });
 
             if (request.SessionId is not null)
             {
@@ -109,7 +114,14 @@ namespace Tasklog.Api.Controllers
                         .FirstOrDefault(c => GetTitle(JsonSerializer.Deserialize<JsonElement>(c.PayloadJson))
                             ?.Trim().ToLowerInvariant() == normalized);
                     if (existing is not null)
+                    {
+                        // A proposed row under autoConfirm is a stranded earlier attempt
+                        // (review R2): confirm it now instead of reporting a false
+                        // "already existed" success with no task behind it.
+                        if (existing.Status == "proposed" && request.AutoConfirm == true)
+                            return await ConfirmCore(existing);
                         return Ok(Project(existing));
+                    }
                 }
             }
 
@@ -129,7 +141,22 @@ namespace Tasklog.Api.Controllers
             await _context.SaveChangesAsync();
 
             if (request.AutoConfirm == true)
-                return await ConfirmCore(capture);
+            {
+                var result = await ConfirmCore(capture);
+                // autoConfirm is all-or-nothing (review R2): a failed materialize must
+                // not strand a proposed row for the dedupe to mistake for success later.
+                if (result is BadRequestObjectResult)
+                {
+                    _context.ChangeTracker.Clear();
+                    var stranded = await _context.Captures.FindAsync(capture.Id);
+                    if (stranded is not null && stranded.Status == "proposed")
+                    {
+                        _context.Captures.Remove(stranded);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+                return result;
+            }
 
             return CreatedAtAction(nameof(GetById), new { id = capture.Id }, Project(capture));
         }
@@ -215,7 +242,7 @@ namespace Tasklog.Api.Controllers
                 "mood" => MaterializeMood(payload),
                 "thought" => MaterializeThought(capture, payload),
                 "expense" => await MaterializeExpense(payload),
-                "time" => await MaterializeTime(payload),
+                "time" => await MaterializeTime(capture, payload),
                 "note" => await MaterializeWeave(payload),
                 _ => (null, null, $"No writer registered for type '{capture.Type}'."),
             };
@@ -382,11 +409,12 @@ namespace Tasklog.Api.Controllers
         // ops: start (auto-stops running), stop, manual (closed interval), edit (retro).
         // No grid-snapping here - agent writes record what was said; the Time tab's own
         // editor keeps its snapping behavior.
-        private async Task<(string?, object?, string?)> MaterializeTime(JsonElement payload)
+        private async Task<(string?, object?, string?)> MaterializeTime(Capture capture, JsonElement payload)
         {
             var op = payload.TryGetProperty("op", out var o) && o.ValueKind == JsonValueKind.String
                 ? o.GetString() : null;
             var now = DateTime.Now;
+            var horizon = now.AddMinutes(5); // same future tolerance as the manual-log endpoint
 
             DateTime? Get(string name) =>
                 payload.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String
@@ -410,11 +438,27 @@ namespace Tasklog.Api.Controllers
                 {
                     // The running timer stops at the NEW entry's start, not at "now" -
                     // a backdated start must not leave the old entry overlapping it
-                    // (the all-night-dinner bug, 12 Sep). Never end before it began.
+                    // (the all-night-dinner bug, 12 Sep). A running timer that started
+                    // AT or AFTER the new start is fully superseded by the narration
+                    // and is removed, pre-image kept for undo (review R4).
                     var startAt = Get("startedAt") ?? now;
+                    if (startAt > horizon)
+                        return (null, null, "startedAt cannot be in the future.");
                     var running = await _context.TimeEntries.Where(x => x.EndedAt == null).ToListAsync();
+                    var undo = new JsonObject { ["op"] = "start" };
                     foreach (var r in running)
-                        r.EndedAt = startAt > r.StartedAt ? startAt : now;
+                    {
+                        if (startAt > r.StartedAt)
+                        {
+                            r.EndedAt = startAt;
+                            AppendTo(undo, "reopen", JsonValue.Create(r.Id));
+                        }
+                        else
+                        {
+                            AppendTo(undo, "removed", PreImage(r));
+                            _context.TimeEntries.Remove(r);
+                        }
+                    }
                     var entry = new TimeEntry
                     {
                         TaskId = task?.Id,
@@ -424,6 +468,7 @@ namespace Tasklog.Api.Controllers
                         CreatedAt = now,
                     };
                     _context.TimeEntries.Add(entry);
+                    StampUndo(capture, undo);
                     return ("timeEntry", entry, null);
                 }
                 case "stop":
@@ -433,7 +478,15 @@ namespace Tasklog.Api.Controllers
                         : await _context.TimeEntries.Where(x => x.EndedAt == null)
                             .OrderByDescending(x => x.StartedAt).FirstOrDefaultAsync();
                     if (entry is null) return (null, null, "no running time entry to stop.");
-                    entry.EndedAt = Get("endedAt") ?? now;
+                    if (entry.EndedAt is not null)
+                        return (null, null, $"time entry {entry.Id} is already stopped.");
+                    var endAt = Get("endedAt") ?? now;
+                    if (endAt <= entry.StartedAt)
+                        return (null, null, "endedAt must be after the entry's start.");
+                    if (endAt > horizon)
+                        return (null, null, "endedAt cannot be in the future.");
+                    entry.EndedAt = endAt;
+                    StampUndo(capture, new JsonObject { ["op"] = "stop" });
                     return ("timeEntry", entry, null);
                 }
                 case "manual":
@@ -442,12 +495,42 @@ namespace Tasklog.Api.Controllers
                     var end = Get("endedAt");
                     if (start is null || end is null || end <= start)
                         return (null, null, "a manual time payload requires ordered startedAt and endedAt.");
+                    if (end > horizon)
+                        return (null, null, "endedAt cannot be in the future.");
                     // A retro interval trims any running timer it overlaps ("that idle
                     // time was brunch" must not leave the work timer running through
-                    // the brunch): the running entry ends where the interval begins.
-                    var overlapped = await _context.TimeEntries
-                        .Where(x => x.EndedAt == null && x.StartedAt < start).ToListAsync();
-                    foreach (var r in overlapped) r.EndedAt = start;
+                    // the brunch). Three cases (review R3): started before the block -
+                    // seal at the block's start (discard sub-2.5-min slivers); started
+                    // INSIDE the block - push its start past the block; started after -
+                    // untouched. Everything displaced is recorded for undo.
+                    var undo = new JsonObject { ["op"] = "manual" };
+                    var running = await _context.TimeEntries.Where(x => x.EndedAt == null).ToListAsync();
+                    foreach (var r in running)
+                    {
+                        if (r.StartedAt >= end) continue;
+                        if (r.StartedAt < start)
+                        {
+                            if ((start.Value - r.StartedAt).TotalMinutes < 2.5)
+                            {
+                                AppendTo(undo, "removed", PreImage(r));
+                                _context.TimeEntries.Remove(r);
+                            }
+                            else
+                            {
+                                r.EndedAt = start;
+                                AppendTo(undo, "reopen", JsonValue.Create(r.Id));
+                            }
+                        }
+                        else
+                        {
+                            AppendTo(undo, "movedStart", new JsonObject
+                            {
+                                ["id"] = r.Id,
+                                ["prev"] = r.StartedAt.ToString("s"),
+                            });
+                            r.StartedAt = end.Value;
+                        }
+                    }
                     var entry = new TimeEntry
                     {
                         TaskId = task?.Id,
@@ -458,6 +541,7 @@ namespace Tasklog.Api.Controllers
                         CreatedAt = now,
                     };
                     _context.TimeEntries.Add(entry);
+                    StampUndo(capture, undo);
                     return ("timeEntry", entry, null);
                 }
                 case "edit":
@@ -466,18 +550,71 @@ namespace Tasklog.Api.Controllers
                         return (null, null, "a time edit requires entryId.");
                     var entry = await _context.TimeEntries.FindAsync(eid.GetInt32());
                     if (entry is null) return (null, null, $"Time entry {eid.GetInt32()} not found.");
-                    if (Get("startedAt") is DateTime s) entry.StartedAt = s;
-                    if (Get("endedAt") is DateTime e2) entry.EndedAt = e2;
-                    if (Desc() is string ds) entry.Description = ds;
-                    if (task is not null) { entry.TaskId = task.Id; entry.ProjectId ??= task.ProjectId; }
+                    // Pre-image of exactly the fields this edit touches, so undo can
+                    // restore them instead of deleting the entry (review R1).
+                    var prev = new JsonObject();
+                    if (Get("startedAt") is DateTime s)
+                    {
+                        prev["startedAt"] = entry.StartedAt.ToString("s");
+                        entry.StartedAt = s;
+                    }
+                    if (Get("endedAt") is DateTime e2)
+                    {
+                        prev["endedAt"] = entry.EndedAt?.ToString("s");
+                        entry.EndedAt = e2;
+                    }
+                    if (Desc() is string ds)
+                    {
+                        prev["description"] = entry.Description;
+                        entry.Description = ds;
+                    }
+                    if (task is not null)
+                    {
+                        prev["taskId"] = entry.TaskId;
+                        entry.TaskId = task.Id;
+                        entry.ProjectId ??= task.ProjectId;
+                    }
                     if (entry.EndedAt is DateTime ee && ee <= entry.StartedAt)
                         return (null, null, "endedAt must be after startedAt.");
+                    if (entry.EndedAt is DateTime ef && ef > horizon)
+                        return (null, null, "endedAt cannot be in the future.");
+                    StampUndo(capture, new JsonObject { ["op"] = "edit", ["prev"] = prev });
                     return ("timeEntry", entry, null);
                 }
                 default:
                     return (null, null, "time op must be one of: start, stop, manual, edit.");
             }
         }
+
+        // ---- time-undo plumbing (review R1) ----
+
+        // The receipt records how to reverse its own write under the reserved "_undo"
+        // key of PayloadJson - no schema change, and the recipe dies with the row.
+        private static void StampUndo(Capture capture, JsonObject undo)
+        {
+            var payload = JsonNode.Parse(capture.PayloadJson)!.AsObject();
+            payload["_undo"] = undo;
+            capture.PayloadJson = payload.ToJsonString();
+        }
+
+        private static void AppendTo(JsonObject undo, string key, JsonNode? item)
+        {
+            if (undo[key] is not JsonArray arr)
+            {
+                arr = new JsonArray();
+                undo[key] = arr;
+            }
+            arr.Add(item);
+        }
+
+        // Enough of a running entry to recreate it if its removal is undone.
+        private static JsonObject PreImage(TimeEntry r) => new()
+        {
+            ["startedAt"] = r.StartedAt.ToString("s"),
+            ["taskId"] = r.TaskId,
+            ["projectId"] = r.ProjectId,
+            ["description"] = r.Description,
+        };
 
         // The weave (type "note"): merge whole journal sections for a day through the
         // shared merge service - the same semantics as the HTTP PATCH, so an agent write
@@ -547,8 +684,9 @@ namespace Tasklog.Api.Controllers
                         if (expense is not null) _context.Expenses.Remove(expense);
                         break;
                     case "timeEntry":
-                        var entry = await _context.TimeEntries.FindAsync(entityId);
-                        if (entry is not null) _context.TimeEntries.Remove(entry);
+                        var refusal = await UndoTimeEntry(capture, entityId);
+                        if (refusal is not null)
+                            return BadRequest(new { message = refusal });
                         break;
                     case "journalEntry":
                         return BadRequest(new { message = "A journal weave cannot be undone wholesale; edit the journal instead." });
@@ -561,6 +699,105 @@ namespace Tasklog.Api.Controllers
             capture.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
             return Ok(Project(capture));
+        }
+
+        // Undo a time write per the op it recorded (review R1): only ops that CREATED an
+        // entry may delete one; "stop" reopens, "edit" restores the pre-image. Receipts
+        // from before the _undo record refuse rather than guess for stop/edit. Returns a
+        // refusal message, or null when the undo was applied.
+        private async Task<string?> UndoTimeEntry(Capture capture, int entityId)
+        {
+            var payload = JsonNode.Parse(capture.PayloadJson)!.AsObject();
+            var undo = payload["_undo"] as JsonObject;
+            var op = (undo?["op"] ?? payload["op"])?.GetValue<string>();
+            var entry = await _context.TimeEntries.FindAsync(entityId);
+
+            switch (op)
+            {
+                case "start":
+                case "manual":
+                {
+                    if (entry is not null) _context.TimeEntries.Remove(entry);
+                    if (undo is null) return null; // legacy receipt: delete-only undo
+
+                    // Restore what the write displaced - but never create a second
+                    // running timer: if something else runs now, the restoration of a
+                    // RUNNING state is skipped (the closed/moved edits still revert).
+                    var running = await _context.TimeEntries
+                        .AnyAsync(x => x.EndedAt == null && x.Id != entityId);
+                    if (undo["reopen"] is JsonArray reopen && !running)
+                        foreach (var idNode in reopen)
+                        {
+                            var sealedEntry = await _context.TimeEntries.FindAsync(idNode!.GetValue<int>());
+                            if (sealedEntry is null) continue;
+                            sealedEntry.EndedAt = null;
+                            running = true;
+                            break;
+                        }
+                    if (undo["removed"] is JsonArray removed && !running && removed.Count > 0)
+                    {
+                        var r = removed[0]!.AsObject();
+                        if (DateTime.TryParse(r["startedAt"]?.GetValue<string>(), out var rs))
+                            _context.TimeEntries.Add(new TimeEntry
+                            {
+                                StartedAt = rs,
+                                TaskId = r["taskId"]?.GetValue<int>(),
+                                ProjectId = r["projectId"]?.GetValue<int>(),
+                                Description = r["description"]?.GetValue<string>(),
+                                CreatedAt = DateTime.Now,
+                            });
+                    }
+                    if (undo["movedStart"] is JsonArray moved)
+                        foreach (var m in moved)
+                        {
+                            var mo = m!.AsObject();
+                            var e = await _context.TimeEntries.FindAsync(mo["id"]!.GetValue<int>());
+                            if (e is not null && DateTime.TryParse(mo["prev"]?.GetValue<string>(), out var ps))
+                                e.StartedAt = ps;
+                        }
+                    return null;
+                }
+                case "stop":
+                {
+                    if (entry is null) return null; // entity already gone; just dismiss
+                    if (undo is null)
+                        return "this stop predates undo support; edit the entry instead.";
+                    var running = await _context.TimeEntries
+                        .AnyAsync(x => x.EndedAt == null && x.Id != entry.Id);
+                    if (running)
+                        return "another timer is running; undoing this stop would restart the old one - edit the entry instead.";
+                    entry.EndedAt = null;
+                    return null;
+                }
+                case "edit":
+                {
+                    if (entry is null) return null;
+                    if (undo?["prev"] is not JsonObject prev)
+                        return "this edit predates undo support; edit the entry instead.";
+                    if (prev.ContainsKey("endedAt") && prev["endedAt"] is null)
+                    {
+                        var running = await _context.TimeEntries
+                            .AnyAsync(x => x.EndedAt == null && x.Id != entry.Id);
+                        if (running)
+                            return "another timer is running; undoing this edit would restart the old one - edit the entry instead.";
+                    }
+                    if (prev.ContainsKey("startedAt")
+                        && DateTime.TryParse(prev["startedAt"]?.GetValue<string>(), out var ps))
+                        entry.StartedAt = ps;
+                    if (prev.ContainsKey("endedAt"))
+                        entry.EndedAt = DateTime.TryParse(prev["endedAt"]?.GetValue<string>(), out var pe)
+                            ? pe : null;
+                    if (prev.ContainsKey("description"))
+                        entry.Description = prev["description"]?.GetValue<string>();
+                    if (prev.ContainsKey("taskId"))
+                        entry.TaskId = prev["taskId"]?.GetValue<int>();
+                    return null;
+                }
+                default:
+                    // Unknown op with a created entity id: delete-only, the safe legacy shape.
+                    if (entry is not null) _context.TimeEntries.Remove(entry);
+                    return null;
+            }
         }
 
         // ---- helpers ----

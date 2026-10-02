@@ -141,23 +141,48 @@ async function appendMessages(
   }
 }
 
-// Card outcomes, injected per turn: Sage proposes cards but is never told what
-// the user did with them - found when it could not answer "is the procureflow
-// task created?". This closes that loop (and stops it re-raising kept things).
+// Write outcomes, injected per turn: Sage writes autonomously but is never told
+// what later happened to a write (an undo, a toss). This closes that loop. v4.1
+// (review R6): every log_* call leaves a capture, so the labels are per-type now -
+// the old task-only wording called a mood check-in `"undefined": KEPT (task created)`.
+type CaptureRow = {
+  id: number;
+  type: string;
+  status: string;
+  payload: Record<string, unknown>;
+};
+
+function captureLabel(c: CaptureRow): string {
+  const p = c.payload;
+  const s = (v: unknown, max = 40) => (typeof v === "string" ? v.slice(0, max) : "");
+  switch (c.type) {
+    case "task":
+      return `task "${s(p.title)}"`;
+    case "mood":
+      return `mood [${Array.isArray(p.words) ? p.words.slice(0, 3).join(", ") : ""}]`;
+    case "expense":
+      return `expense ${typeof p.amount === "number" ? p.amount : "?"} (${s(p.note)})`;
+    case "time":
+      return `time ${s(p.op, 10)}${s(p.description) ? ` "${s(p.description)}"` : ""}`;
+    case "thought":
+      return `thought "${s(p.text ?? p.body)}"`;
+    case "note":
+      return `journal weave`;
+    default:
+      return c.type;
+  }
+}
+
 async function cardContext(sessionId: number): Promise<string> {
   try {
     const res = await fetch(`${API}/api/captures?sessionId=${sessionId}`);
     if (!res.ok) return "";
-    const captures = (await res.json()) as Array<{
-      id: number;
-      status: string;
-      payload: { title?: string };
-    }>;
+    const captures = (await res.json()) as CaptureRow[];
     if (captures.length === 0) return "";
     const label = (s: string) =>
-      s === "confirmed" ? "KEPT (task created)" : s === "dismissed" ? "TOSSED by the user" : "still pending";
-    const lines = captures.map((c) => `- card #${c.id} "${c.payload.title}": ${label(c.status)}`);
-    return `\n\n## Your proposal cards this session (live status)\n${lines.join("\n")}\nIf they say a toss was an accident, point them at the Restore button on that card - you cannot restore it yourself.\n`;
+      s === "confirmed" ? "logged" : s === "dismissed" ? "UNDONE/tossed by the user" : "still pending (card)";
+    const lines = captures.map((c) => `- #${c.id} ${captureLabel(c)}: ${label(c.status)}`);
+    return `\n\n## Your writes this session (live status)\n${lines.join("\n")}\nA line marked UNDONE means the user reversed it - do not silently redo it. If they say a toss was an accident, point them at the Restore button on that card - you cannot restore it yourself.\n`;
   } catch {
     return "";
   }
