@@ -1,6 +1,6 @@
 # P92 - The Companion Days (v4.1)
 
-**Overall Progress:** `89% (Stages A+B built; Step 9 docs/ship remain)`
+**Overall Progress:** `100%`
 
 ## TLDR
 Sage gains typed capture writers (mood, thought, note, expense, time) flowing
@@ -148,8 +148,8 @@ mockup is the UI spec for this plan; no separate /ui-spec round needed.
   - [x] 🟩 Profile tab per pin 15: where-the-week-went (evidence v1), areas
         + whys, What Sage Knows with retire-X, people, memories, wishes
 
-- [ ] 🟥 **Step 9: Docs + ship prep** `[sequential]` → depends on: Step 8
-  - [ ] 🟥 /document sync, CHANGELOG v4.1.0, review round
+- [x] 🟩 **Step 9: Docs + ship prep** `[sequential]` → depends on: Step 8
+  - [x] 🟩 /document sync, CHANGELOG v4.1.0, review round
 
 ## Outcomes (Stage A, 12 Sep 2026)
 
@@ -178,4 +178,21 @@ What changed vs planned:
 Key decisions during execution: allowedTools generated from the tool list
 (auto-approve correct under D1); merge implementation shared as a service so
 HTTP and capture writers cannot diverge; ProfileNotes dedupe by exact text.
+
+## Outcomes (Step 9 + review, 2 Oct 2026)
+
+- Beyond plan scope, built during the stretch: the tape (watchman agent +
+  /api/activity batch/segments + check_screen tool + tape rule in the persona +
+  v1 YouTube alert popup) - grew out of the 12 Sep backdating lesson.
+- Three-agent review (security/quality/logic): 1 block + 11 warns + 11
+  suggests. The block cluster was fixed pre-ship (cba2ece): op-aware time undo
+  via an _undo record on the receipt (stop reopens, edit restores pre-image,
+  only creators delete), retro-trim covers timers started inside the interval,
+  backdated starts supersede instead of double-counting, stop validates its
+  boundaries, failed autoConfirms strand nothing, and the per-turn capture
+  context labels writes per type. Remaining warns/suggests tracked for
+  follow-up issues (R7-R23: tape prompt-injection fencing, undo session guard,
+  watchman spool hygiene, clear-sentinel consistency, idle-threshold unification,
+  dedupe helpers).
+- 398 backend tests green at ship.
 
