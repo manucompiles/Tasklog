@@ -2,6 +2,22 @@
 
 ---
 
+## v4.1.1 - The tape survives unclean shutdowns
+*October 2026*
+
+### Fixed
+
+- **Watchman no longer crash-loops on a corrupt spool line** (#93) - an unclean
+  shutdown mid-append (a power cut, a hard reset) could leave a NUL-damaged line in
+  the spool; the shipper then crashed on it, restarted, and crashed again forever,
+  shipping nothing. Found live after the laptop's dead-charger week, exactly as
+  review finding R9 predicted. Undecodable lines are now skipped and counted, a
+  server REJECTION (4xx) parks the chunk in a quarantine file instead of retrying
+  it forever, and the spool rotates once fully acknowledged so it stops growing
+  without bound.
+
+---
+
 ## v4.1.0 - The companion days
 *September 2026*
 
