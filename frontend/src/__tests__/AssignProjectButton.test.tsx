@@ -15,9 +15,10 @@ jest.mock('@/lib/api', () => ({
 const mockedAssign = assignTaskProject as jest.MockedFunction<typeof assignTaskProject>
 const mockedUseRouter = useRouter as jest.Mock
 
+const homeFields = { status: 'active', areaId: null, area: null, about: null, nowText: null, nowHistoryJson: '[]' }
 const projects = [
-  { id: 1, name: 'Work', color: null, clientId: null, client: null, position: 0, createdAt: '2024-01-01T00:00:00Z' },
-  { id: 2, name: 'Personal', color: null, clientId: null, client: null, position: 1, createdAt: '2024-01-01T00:00:00Z' },
+  { id: 1, name: 'Work', color: null, clientId: null, client: null, position: 0, createdAt: '2024-01-01T00:00:00Z', ...homeFields },
+  { id: 2, name: 'Personal', color: null, clientId: null, client: null, position: 1, createdAt: '2024-01-01T00:00:00Z', ...homeFields },
 ]
 
 describe('AssignProjectButton', () => {

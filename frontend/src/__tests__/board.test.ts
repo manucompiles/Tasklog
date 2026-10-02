@@ -2,8 +2,8 @@ import { groupTasksForBoard } from '@/lib/board'
 import { Task, Project } from '@/lib/api'
 
 const projects: Project[] = [
-  { id: 1, name: 'Work', color: null, clientId: null, client: null, position: 0, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 2, name: 'Home', color: null, clientId: null, client: null, position: 1, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 1, name: 'Work', color: null, clientId: null, client: null, position: 0, createdAt: '2026-01-01T00:00:00Z', status: 'active', areaId: null, area: null, about: null, nowText: null, nowHistoryJson: '[]' },
+  { id: 2, name: 'Home', color: null, clientId: null, client: null, position: 1, createdAt: '2026-01-01T00:00:00Z', status: 'active', areaId: null, area: null, about: null, nowText: null, nowHistoryJson: '[]' },
 ]
 
 let nextId = 1

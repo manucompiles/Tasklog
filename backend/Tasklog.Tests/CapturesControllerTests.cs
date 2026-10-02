@@ -61,9 +61,9 @@ public class CapturesControllerTests
         var controller = new CapturesController(context);
 
         var result = await controller.Create(new CaptureRequest(
-            "mood", Payload("""{"words":["ok"]}"""), null, null, null, null));
+            "teleport", Payload("""{"words":["ok"]}"""), null, null, null, null));
 
-        result.Should().BeOfType<BadRequestObjectResult>(); // v4.0 registry = task only
+        result.Should().BeOfType<BadRequestObjectResult>(); // not in the type registry
     }
 
     [Fact]
@@ -271,5 +271,181 @@ public class CapturesControllerTests
         var editAfter = await controller.Update(capture.Id,
             Payload("""{"payload":{"title":"too late"}}"""));
         editAfter.Should().BeOfType<BadRequestObjectResult>(); // audit rows are immutable
+    }
+
+    // ---- time writes: boundary edges + op-aware undo (review R1, R3-R5) ----
+
+    private static async Task<TimeEntry> SeedRunning(TasklogDbContext context, DateTime startedAt, string? desc = null)
+    {
+        var entry = new TimeEntry { StartedAt = startedAt, Description = desc, CreatedAt = DateTime.Now };
+        context.TimeEntries.Add(entry);
+        await context.SaveChangesAsync();
+        return entry;
+    }
+
+    private static CaptureRequest TimeRequest(string payloadJson) =>
+        new("time", JsonDocument.Parse(payloadJson).RootElement.Clone(), null, null, null, null, AutoConfirm: true);
+
+    [Fact]
+    public async Task UndoStop_ReopensTheEntry_InsteadOfDeletingIt()
+    {
+        using var context = CreateContext();
+        var controller = new CapturesController(context);
+        var entry = await SeedRunning(context, DateTime.Now.AddHours(-2), "deep work");
+
+        await controller.Create(TimeRequest("""{"op":"stop"}"""));
+        entry.EndedAt.Should().NotBeNull();
+
+        await controller.Dismiss(Single(context).Id);
+
+        context.TimeEntries.Should().ContainSingle(); // "undo my stop" must never erase 2h of work
+        entry.EndedAt.Should().BeNull();              // ...it reopens the timer
+    }
+
+    [Fact]
+    public async Task UndoEdit_RestoresThePreImage_InsteadOfDeleting()
+    {
+        using var context = CreateContext();
+        var controller = new CapturesController(context);
+        var start = DateTime.Today.AddDays(-1).AddHours(9);
+        var entry = new TimeEntry { StartedAt = start, EndedAt = start.AddHours(1), CreatedAt = DateTime.Now };
+        context.TimeEntries.Add(entry);
+        await context.SaveChangesAsync();
+
+        await controller.Create(TimeRequest(
+            $$"""{"op":"edit","entryId":{{entry.Id}},"endedAt":"{{start.AddMinutes(90):s}}"}"""));
+        entry.EndedAt.Should().Be(start.AddMinutes(90));
+
+        await controller.Dismiss(Single(context).Id);
+
+        context.TimeEntries.Should().ContainSingle();
+        entry.EndedAt.Should().Be(start.AddHours(1)); // the edited field reverts, nothing is deleted
+    }
+
+    [Fact]
+    public async Task UndoStart_DeletesCreatedEntry_AndReopensTheSealedOne()
+    {
+        using var context = CreateContext();
+        var controller = new CapturesController(context);
+        var old = await SeedRunning(context, DateTime.Now.AddHours(-3), "dinner");
+
+        await controller.Create(TimeRequest($$"""{"op":"start","startedAt":"{{DateTime.Now.AddHours(-1):s}}","description":"sleep"}"""));
+        old.EndedAt.Should().NotBeNull(); // sealed at the new start
+
+        await controller.Dismiss(Single(context).Id);
+
+        context.TimeEntries.Should().ContainSingle(e => e.Description == "dinner");
+        old.EndedAt.Should().BeNull(); // the displaced timer runs again
+    }
+
+    [Fact]
+    public async Task Start_BackdatedToBeforeRunningStart_SupersedesIt_AndUndoRecreatesIt()
+    {
+        using var context = CreateContext();
+        var controller = new CapturesController(context);
+        // Timer mistakenly started 21:30; the narration says sleep began 21:00 (review
+        // R4): sealing the old one at "now" would double-count 21:30-onward.
+        var mistaken = await SeedRunning(context, DateTime.Now.AddMinutes(-90), "dinner");
+
+        await controller.Create(TimeRequest(
+            $$"""{"op":"start","startedAt":"{{DateTime.Now.AddHours(-2):s}}","description":"sleep"}"""));
+
+        context.TimeEntries.Should().ContainSingle(); // the superseded timer is gone, no overlap
+        context.TimeEntries.Single().Description.Should().Be("sleep");
+
+        await controller.Dismiss(Single(context).Id);
+        context.TimeEntries.Should().ContainSingle(e => e.Description == "dinner");
+        context.TimeEntries.Single(e => e.Description == "dinner").EndedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Manual_PushesRunningTimerThatStartedInsideTheInterval()
+    {
+        using var context = CreateContext();
+        var controller = new CapturesController(context);
+        var day = DateTime.Today; // runaway timer started 01:30, still running
+        var runaway = await SeedRunning(context, day.AddMinutes(90), "accidental");
+
+        // "I slept 00:50-06:30" - the exact all-night shape the trim exists for,
+        // with the runaway starting INSIDE the interval (review R3).
+        var result = await controller.Create(TimeRequest(
+            $$"""{"op":"manual","startedAt":"{{day.AddMinutes(50):s}}","endedAt":"{{day.AddMinutes(390):s}}","description":"sleep"}"""));
+
+        result.Should().BeOfType<OkObjectResult>();
+        runaway.StartedAt.Should().Be(day.AddMinutes(390)); // pushed past the sleep block
+        runaway.EndedAt.Should().BeNull();                  // still running, but no overlap
+    }
+
+    [Fact]
+    public async Task Stop_EndBeforeStart_Fails_AndLeavesNoStrandedCapture()
+    {
+        using var context = CreateContext();
+        var controller = new CapturesController(context);
+        var entry = await SeedRunning(context, DateTime.Now.AddMinutes(-10));
+
+        var result = await controller.Create(TimeRequest(
+            $$"""{"op":"stop","endedAt":"{{DateTime.Now.AddMinutes(-30):s}}"}"""));
+
+        result.Should().BeOfType<BadRequestObjectResult>(); // negative duration refused (review R5)
+        entry.EndedAt.Should().BeNull();
+        context.Captures.Should().BeEmpty(); // autoConfirm is all-or-nothing (review R2)
+    }
+
+    [Fact]
+    public async Task Stop_AlreadyStoppedEntry_Refuses()
+    {
+        using var context = CreateContext();
+        var controller = new CapturesController(context);
+        var start = DateTime.Now.AddHours(-2);
+        var entry = new TimeEntry { StartedAt = start, EndedAt = start.AddHours(1), CreatedAt = DateTime.Now };
+        context.TimeEntries.Add(entry);
+        await context.SaveChangesAsync();
+
+        var result = await controller.Create(TimeRequest($$"""{"op":"stop","entryId":{{entry.Id}}}"""));
+
+        result.Should().BeOfType<BadRequestObjectResult>(); // re-stopping must not overwrite the end
+        entry.EndedAt.Should().Be(start.AddHours(1));
+    }
+
+    [Fact]
+    public async Task AutoConfirm_FailedMaterialize_StrandsNothing_AndRetryConfirmsCleanly()
+    {
+        using var context = CreateContext();
+        var controller = new CapturesController(context);
+        var sessionId = await SeedSession(context);
+
+        // Stale projectId (review R2): the write fails - and must vanish entirely,
+        // or the session dedupe later reports success for a task that never existed.
+        var failed = await controller.Create(new CaptureRequest(
+            "task", Payload("""{"title":"Buy gift","projectId":999}"""), sessionId, null, null, null, AutoConfirm: true));
+        failed.Should().BeOfType<BadRequestObjectResult>();
+        context.Captures.Should().BeEmpty();
+
+        var retry = await controller.Create(new CaptureRequest(
+            "task", Payload("""{"title":"Buy gift"}"""), sessionId, null, null, null, AutoConfirm: true));
+        retry.Should().BeOfType<OkObjectResult>();
+        Single(context).Status.Should().Be("confirmed");
+        context.Tasks.Should().ContainSingle(t => t.Title == "Buy gift");
+    }
+
+    [Fact]
+    public async Task AutoConfirm_DedupeHitOnProposedCard_ConfirmsItInsteadOfFalseSuccess()
+    {
+        using var context = CreateContext();
+        var controller = new CapturesController(context);
+        var sessionId = await SeedSession(context);
+
+        // A v4.0-style pending card exists; Sage later logs the same title autonomously.
+        await controller.Create(new CaptureRequest(
+            "task", Payload("""{"title":"Call the plumber"}"""), sessionId, null, null, null));
+        Single(context).Status.Should().Be("proposed");
+
+        var logged = await controller.Create(new CaptureRequest(
+            "task", Payload("""{"title":"call the plumber"}"""), sessionId, null, null, null, AutoConfirm: true));
+
+        logged.Should().BeOfType<OkObjectResult>();
+        context.Captures.Should().ContainSingle(); // still deduped
+        Single(context).Status.Should().Be("confirmed");
+        context.Tasks.Should().ContainSingle(t => t.Title == "Call the plumber");
     }
 }

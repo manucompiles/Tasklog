@@ -72,7 +72,8 @@ I wanted a task system I understood completely - one where the data, the workflo
 - A structured daily journal at `/journal` - morning check-in, mind dump, today's plan, gratitude, affirmations, and an evening review, all on one page with a calendar to browse any day
 - Mood check-ins through an interactive feelings wheel; the day renders as a "mood arc" chart, and your emotional shift and end-of-day energy are derived from what you logged, never typed
 - The day's plan links real tasks - tick them from the journal, and anything you finished off-plan appears automatically under "Unplanned, got done"
-- Front of mind / Back of mind lists you clear by the end of the day; anything left rolls into tomorrow until you consciously keep or close it
+- Front of mind / Back of mind lists you clear by the end of the day; anything left rolls into tomorrow until you consciously keep or close it - each item ends the day closed, rolled over, or consciously let go (v4.1)
+- The day page opens with a **morning brief** (last night's sleep, yesterday's rollovers), shows derived day tiles, a structured **expenses section** with splits and a daily total, and evening auto-lines for what moved (v4.1)
 - Every day exports as a clean, Obsidian-compatible markdown note - one day or your whole journal as a zip
 
 **Works everywhere**
@@ -81,12 +82,21 @@ I wanted a task system I understood completely - one where the data, the workflo
 - All data stored locally - no cloud, no account, no sync service required
 - Cross-platform and runs on Windows, macOS, and Linux - your laptop or a home server, whatever fits your setup
 
-**Sage - a journaling companion (v4.0)**
-- Talk about your day on the Sage tab; when something actionable comes up, Sage proposes a **task card** you Keep / Edit / Toss (Restore covers a mis-tap). Kept cards become real tasks - Sage never writes without your tap
-- **Understands meaning, not keywords** - "the tax thing" matches your existing "File the income tax return" via local Ollama embeddings, so it says "already on your list" instead of duplicating
-- Time-aware (knows the clock, notices when you come back after hours) and conversationally editable ("put that in its own project" morphs the card; one Keep creates project + task)
-- One conversation per day with a history calendar; past days read-only, their cards still actionable; your words save before the AI ever runs
+**Sage - a companion that acts on what it hears (v4.0, autonomous in v4.1)**
+- Talk about your day on the Sage tab; narration becomes real data directly - tasks, moods, thoughts, expenses (with informal splits), notes, journal prose, and time entries. Every write shows a small **receipt chip with one-tap undo**, so trust comes from reversibility, not approval dialogs
+- **Honest time from talk** - "dinner routine now", "that was from 22:05": Sage starts, stops, backdates, and edits timers; timers can never overlap by design
+- **Understands meaning, not keywords** - "the tax thing" matches your existing "File the income tax return" via local Ollama embeddings, so it touches the existing task instead of duplicating
+- **Knows your day already** - today's journal, time entries, and expenses ride along in its context, plus a ledger of durable facts it has learned about you (retire any that go stale)
+- Time-aware (knows the clock, notices when you come back after hours); one conversation per day with a history calendar; your words save before the AI ever runs
 - Runs on **your own Claude subscription** (Claude Agent SDK - no API key) with the persona in one editable spec file; the whole surface is opt-in via `COMPANION_ENABLED=1` and stays off your public instance
+
+**Projects and people as first-class pages (v4.1)**
+- `/projects` - every project gets a **home**, grouped by life areas (each with its *why*): status, an About, a "Now" chapter whose history archives instead of overwriting, and **goals** with a timespan, nudgeable progress, dated expectation revisions, and "the door" - the smallest next action
+- `/profile` - **people as entities**: relation, contact rhythm, birthday, open threads, and "next time, bring up X"
+
+**The tape - optional screen-activity evidence (v4.1)**
+- A tiny `watchman` agent per machine ships **window titles + idle state** (titles only, never contents; LAN only) so time boundaries come from evidence: Sage checks "when did the PC actually go idle" before backdating anything
+- v1 alerts: a desktop popup when YouTube exceeds its budget in a rolling window - a mirror, not a judgment
 
 **Talk to your tasks via Claude (v2.10)**
 - Tasklog can be plugged into claude.ai as a custom connector (Model Context Protocol server)

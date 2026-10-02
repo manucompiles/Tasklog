@@ -12,7 +12,10 @@ and update this document - not to automatically reject the idea.
 Tasklog is a personal, self-hosted task management tool that, as of v3.0, grew
 into a broader **day-tracking system**: tasks, time, habits, and a daily journal
 share one data layer, so the day's plan, its execution, and its reflection live
-on the same surface.
+on the same surface. Since v4.x the primary way in is **Sage, a conversational
+companion**: narrate the day and the structure (tasks, time, moods, expenses,
+notes, people) falls out - autonomously since v4.1, with undo instead of
+approval.
 
 It exists to replace subscription-based task apps for a single user who wants
 full ownership of their data and a system they can understand end to end.
@@ -77,7 +80,9 @@ A reminder or alert system would be a meaningful scope addition.
 
 **Single data file** - all task data lives in one SQLite file. A second small SQLite file (`mcp/data/auth.db`) holds OAuth state for the MCP server; this is operational state, not user data, and is safe to wipe at any time to force re-consent.
 
-**AI companion is opt-in and host-bound** (v4.0) - Sage runs only where `COMPANION_ENABLED=1` is set AND a Claude Code subscription login exists on that machine. It is deliberately absent from the public VM (no app auth exists). Two AI doors, one brain: the in-app companion (owns the transcript, proposes-only) and the public MCP connector (claude.ai, direct writes) both operate on the same API.
+**AI companion is opt-in and host-bound** (v4.0) - Sage runs only where `COMPANION_ENABLED=1` is set AND a Claude Code subscription login exists on that machine. It is deliberately absent from the public VM (no app auth exists). Two AI doors, one brain: the in-app companion (owns the transcript; writes autonomously with undo since v4.1) and the public MCP connector (claude.ai, direct writes) both operate on the same API.
+
+**Screen activity stays home** (v4.1) - the tape (window titles + idle state) is the most sensitive stream after journal prose. It is LAN-only, titles-only, and is not exposed over the MCP surface.
 
 ---
 
@@ -127,16 +132,29 @@ A reminder or alert system would be a meaningful scope addition.
 - The **"Today so far"** widget shows a **Client/Project time breakdown** of the day's tracked time (v3.2.0/#86) - proportion bars beside the single total - so task and non-task time unite in the day's actuals. The plan stays intent-only (tasks/habits); actuals live here.
 - The journal page carries its **own scoped visual identity** (fog paper / plum accent / serif prose voice, with a soft dark mode) via `--color-j-*` tokens; the rest of the app is unchanged. Journal prose is bilingual-friendly (Hinglish + Devanagari fall through to system fonts).
 - **Sensitivity note:** journal prose and mood history are the most sensitive data the app holds. They stay LAN-only; the MCP surface does NOT expose journal endpoints yet, and minimal auth (v3.1) is planned before it ever does.
-- **Direction (v4.x):** the fill-the-sections journal is being SUPERSEDED as the capture surface by the companion (below) - its hard-won structure survives as the companion's question agenda and, later, as a *generated* daily note (planned v4.1). The tab stays untouched until that replacement is proven; manual editing remains for no-talk days. See `docs/ideas/living-profile.md`.
+- **The day page was redone in v4.1 (#92)** around the companion: a **morning brief** (last night's sleep + yesterday's rollovers), derived **day tiles**, a structured **expenses section** (split chips + daily total), **note popups**, **mind verdicts** (each front/back-of-mind item closes, rolls over, or is let go), and **evening auto-lines** for what moved. Sage **weaves prose into sections** through a server-side merge, so talking to Sage and typing in the journal coexist without clobbering. Manual editing remains for no-talk days.
 
-**Sage, the journaling companion** (v4.0, #87)
+**Sage, the companion** (v4.0 #87; autonomous since v4.1 #92)
 - A conversational companion on its own tab (`/companion`), with a warm scoped identity (`--color-c-*`, rose/cream - "a refuge, not a dashboard") and a name defined in one spec file (`persona.md`, paired with `meta.ts`).
-- **The trust loop is the core rule: Sage proposes, the human disposes.** When the conversation surfaces an actionable, Sage raises a *card* (title, guessed project, the exact words it heard, confidence). Keep materializes a real task; Edit adjusts it first; Toss declines (and the model can never re-raise a tossed item - only the human's Restore can). Nothing enters the data unconfirmed.
-- **Grounded, not naive:** before proposing, Sage semantically searches open tasks (local Ollama embeddings; "the tax thing" matches "File the income tax return") and says "already on your list" instead of duplicating. Projects are never invented - a new project happens only when the user asks ("put that in its own project"), and one Keep then creates project + task together.
+- **The first law (v4.1): engage with the content first, capture invisibly.** Sage is a companion who happens to keep records, not a logger who happens to chat. He never announces "logged!" or "filed!" - he responds to what was SAID, and the writing happens quietly.
+- **Sage acts, the human can undo** (v4.1 - the trust loop moved from pre-approval to post-hoc). Narration becomes real rows directly: tasks, moods (energy only when a number is said), thoughts, expenses with informal splits, notes, journal prose, time entries. Every write leaves a small receipt chip with one-tap undo. The v4.0 propose-then-Keep cards remain only as a fallback shape. Every autonomous write is also an audit row (the capture), so trust stays inspectable.
+- **Honest time:** Sage starts, stops, backdates, and edits timers from narration. The **tape rule**: before backdating any boundary, Sage must consult the screen-activity tape (`check_screen`) - evidence over guessed times. Timers can never overlap (starts seal the previous entry; retro intervals trim what they cross).
+- **Grounded, not naive:** before creating, Sage semantically searches open tasks (local Ollama embeddings; "the tax thing" matches "File the income tax return") and touches the existing row instead of duplicating. Projects are never invented without the user naming one.
+- **Knows the day already:** each turn carries today's journal state, time entries, and expenses, plus the durable **profile notes** ledger (facts Sage has learned; stale ones retire, never delete) - so the user never re-explains their own day.
 - **Time-aware:** each turn carries the current date/time, and each message carries an invisible timestamp marker on the model's copy only - so "first thing", "tonight", and returning after a 2h gap all read correctly. The user's stored words are never decorated.
-- **One conversation per day** (the daily-note rhythm), with a history calendar - dots on days you talked, past days read-only, their cards still actionable. The transcript saves BEFORE the AI runs and is append-only; words are never lost to an AI failure or a second device.
+- **One conversation per day** (the daily-note rhythm), with a history calendar - dots on days you talked, past days read-only. The transcript saves BEFORE the AI runs and is append-only; words are never lost to an AI failure or a second device.
 - Runs on the user's own Claude subscription (Claude Agent SDK), gated by `COMPANION_ENABLED=1` per host. The provider is a seam: an API-key or local-model implementation can replace Claude Code later without changing the product.
-- **Deferred by design** (the v4.x ladder in `docs/ideas/living-profile.md`): mood capture -> MoodCheckins (v4.1, with the generated daily note), people/mentions (CRM seed), recall, richer facets. v4.0 captures only tasks.
+- **Deferred by design**: freeform long-form notes authored by Sage (memoirs, event writeups), backdated task completion, recall over history, richer facets. See `docs/ideas/living-profile.md` and `docs/ideas/design-principles-v4.md`.
+
+**The tape** (v4.1, #92)
+- A tiny per-machine agent (`watchman/`) samples the active window TITLE + idle state every 30s, spools locally, and ships to the server in idempotent batches (the spool absorbs server sleep; nothing leaves the LAN; titles only, never contents or keystrokes).
+- Exists so time boundaries come from **evidence, not memory**: "the PC went idle at 22:05" beats a guessed "around 22:45". Sage reads coalesced segments via `check_screen`.
+- v1 alerts: a desktop popup when an alertable pattern (YouTube) exceeds its minutes budget within a rolling window - "just a mirror, not a judgment". Future: more patterns, server-driven rules, site blocking.
+
+**Projects tab & Profile tab** (v4.1, #92)
+- `/projects` shows every project as a **home**, grouped by **life areas** (each area carries a *why*). A project home has a status (active / on-hold), an About, and a **Now** chapter - what it's about right now - whose past versions archive as dated history, never overwritten. **Goals** live on projects: a timespan tier (10Y..1M), a why, nudgeable progress (0-100), dated expectation revisions, and **the door** - the smallest next physical action.
+- `/profile` is the mirror: **people as entities** (relation, who they are, contact rhythm, birthday, open threads, "next time bring up X") and the **profile notes** ledger Sage maintains. People are get-or-create by name; a later mention fills blanks but never overwrites what is known.
+- Areas (v4.1) and Clients (v3.2) coexist for now: Clients group projects for time-tracking breakdowns (the Toggl concept); Areas group project homes by life meaning. Whether they merge is an open product question.
 
 **Projects & Clients**
 - Projects let the user categorize tasks (and time entries).

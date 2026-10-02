@@ -22,7 +22,7 @@ What is currently being planned or built:
 
 | Plan file | Issue | Branch | Status |
 |-----------|-------|--------|--------|
-| P92-sage-daily-note.md (pending) | #92 | feature/sage-daily-note-#92 | Planning |
+| P92-companion-days.md | #92 | feature/sage-daily-note-#92 | In Progress |
 
 ---
 

@@ -23,6 +23,8 @@ import {
   getProjects,
   getHabits,
   getTimeEntries,
+  getExpenses,
+  getNotesForDay,
   createTask,
   completeTask,
   addMoodCheckin,
@@ -54,6 +56,10 @@ import CalendarWidget from "./CalendarWidget";
 import MoodArcWidget from "./MoodArcWidget";
 import MindWidget from "./MindWidget";
 import TodaySoFarWidget from "./TodaySoFarWidget";
+import DayTiles from "./DayTiles";
+import MorningBrief from "./MorningBrief";
+import DailyExpensesSection from "./DailyExpensesSection";
+import NotesTodaySection from "./NotesTodaySection";
 import FeelingsWheelModal from "./FeelingsWheelModal";
 import JournalPreview from "./JournalPreview";
 import TaskDetailModal from "../TaskDetailModal";
@@ -105,6 +111,10 @@ export default function JournalClient() {
   // Synchronous mirror of `contents`, updated in the same tick as every edit and on
   // day load - the reliable base for save snapshots (React state updates are deferred,
   // so reading `contents` in an event handler can be one edit behind).
+  // v4.1 (#92): the day's money rows and typed notes (both optional-everything).
+  const [expenses, setExpenses] = useState<import("@/lib/api").ExpenseDto[]>([]);
+  const [notesToday, setNotesToday] = useState<import("@/lib/api").NoteDto[]>([]);
+
   const contentsRef = useRef<Contents>({});
   const eveningRef = useRef<HTMLDivElement | null>(null);
   const autoJumped = useRef(false);
@@ -127,13 +137,15 @@ export default function JournalClient() {
   const loadDay = useCallback(async (day: Date) => {
     const k = dateKey(day);
     const prevK = dateKey(addDays(day, -1));
-    const [entries, cks, completed, prevEntries, timeEntries, habits] = await Promise.all([
+    const [entries, cks, completed, prevEntries, timeEntries, habits, dayExpenses, dayNotes] = await Promise.all([
       getJournalEntries(k),
       getMoodCheckins(k),
       getTasksCompletedOn(k),
       getJournalEntries(prevK),
       getTimeEntries(k, dateKey(addDays(day, 1))),
       getHabits(),
+      getExpenses(k, k).catch(() => []),
+      getNotesForDay(k).catch(() => []),
     ]);
     const byKey: Contents = {};
     for (const e of entries) byKey[e.templateKey] = e.content;
@@ -146,6 +158,8 @@ export default function JournalClient() {
     setTimeSeconds(dayTotalSeconds(timeEntries, day, new Date()));
     setTimeEntries(timeEntries);
     setHabitsDone({ done: habits.filter((h) => h.doneToday).length, total: habits.length });
+    setExpenses(dayExpenses);
+    setNotesToday(dayNotes);
   }, []);
 
   const loadMonthDots = useCallback(async (anchor: Date) => {
@@ -236,6 +250,28 @@ export default function JournalClient() {
   );
   const planDone = [...planIds].filter((id) => tasksById.get(id)?.isCompleted).length;
 
+  // v4.1 (#92, pin 16) - derived lines for the tiles and the evening ceremony.
+  const spentToday = expenses.reduce((sum, x) => sum + (x.direction === "in" ? -x.amount : x.amount), 0);
+  const movedLine = (() => {
+    const parts: string[] = [];
+    const doneTitles = [...planIds]
+      .map((id) => tasksById.get(id))
+      .filter((t) => t?.isCompleted)
+      .map((t) => t!.title);
+    if (doneTitles.length > 0) parts.push(`${doneTitles.join(", ")} - done`);
+    if (unplanned.length > 0) parts.push(`${unplanned.length} unplanned win${unplanned.length > 1 ? "s" : ""}`);
+    if (timeSeconds > 0) parts.push(`${Math.floor(timeSeconds / 3600)}h${String(Math.floor((timeSeconds % 3600) / 60)).padStart(2, "0")}m tracked, no hidden gaps`);
+    return parts.join(" · ");
+  })();
+  const cameBackLine = (() => {
+    const parts: string[] = [];
+    if (notesToday.length > 0) parts.push(`${notesToday.length} thought${notesToday.length > 1 ? "s" : ""} kept`);
+    if (checkins.length > 0) parts.push(`${checkins.length} check-in${checkins.length > 1 ? "s" : ""}`);
+    if (entryDates.size > 0) parts.push(`journal streak alive (${entryDates.size} day${entryDates.size > 1 ? "s" : ""} this month)`);
+    return parts.join(" · ");
+  })();
+
+
   const fom = (daily["front_of_mind"] as MindItem[] | undefined) ?? [];
   const bom = (daily["back_of_mind"] as MindItem[] | undefined) ?? [];
   const fomRolled = rolloverCandidates(
@@ -246,6 +282,9 @@ export default function JournalClient() {
     (yesterdayDaily?.["back_of_mind"] as MindItem[] | undefined) ?? undefined,
     bom,
   );
+
+  // Yesterday's uncleared mind items feed the morning brief's rollover line.
+  const briefRollovers = [...fomRolled, ...bomRolled];
 
   // ---------- actions ----------
 
@@ -477,6 +516,14 @@ export default function JournalClient() {
               <JournalPreview date={key} />
             ) : (
               <div className="space-y-3.5">
+                <DayTiles
+                  checkins={checkins}
+                  planDone={planDone}
+                  planTotal={planIds.size}
+                  spentToday={spentToday}
+                  timeSeconds={timeSeconds}
+                />
+                <MorningBrief timeEntries={timeEntries} rollovers={briefRollovers} />
                 {dailyTemplate?.sections.map((section) => {
                   if (section.kind === "mind") return null; // rail widgets own these
                   const value = daily[section.key];
@@ -536,6 +583,8 @@ export default function JournalClient() {
                             value={(value as Record<string, string> | undefined) ?? {}}
                             checkins={checkins}
                             onChange={onChange}
+                            movedLine={movedLine}
+                            cameBackLine={cameBackLine}
                           />
                         </div>
                       );
@@ -543,6 +592,9 @@ export default function JournalClient() {
                       return null;
                   }
                 })}
+
+                <DailyExpensesSection expenses={expenses} />
+                <NotesTodaySection notes={notesToday} />
 
                 {extraTemplates.map((tpl) =>
                   tpl.sections.map((section) => {

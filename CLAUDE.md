@@ -42,7 +42,7 @@ The goals were:
 - build something understandable end-to-end
 - evolve the system gradually rather than designing everything upfront
 
-The system has three components as of v2.10: a .NET Web API backend, a Next.js frontend, and a Node/TypeScript MCP server that exposes the API to claude.ai as a custom connector via OAuth 2.1 + Cloudflare Tunnel.
+The system has four components as of v4.1: a .NET Web API backend, a Next.js frontend (which also hosts Sage, the AI companion, in an API route), a Node/TypeScript MCP server that exposes the API to claude.ai as a custom connector via OAuth 2.1 + Cloudflare Tunnel, and a small per-machine `watchman` agent that ships screen-activity samples to the API.
 See `CHANGELOG.md` for history and `docs/architecture.md` for current structure.
 
 ---

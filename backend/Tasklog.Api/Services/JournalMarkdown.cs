@@ -12,7 +12,7 @@ namespace Tasklog.Api.Services
     public static class JournalMarkdown
     {
         // A mood check-in already resolved out of storage.
-        public record CheckinData(DateTime At, string[] Words, int Energy, int? MocLevel);
+        public record CheckinData(DateTime At, string[] Words, int? Energy, int? MocLevel);
 
         // A plan-referenced task resolved to its display state.
         public record PlanTaskData(int Id, string Title, bool IsCompleted);
@@ -91,7 +91,7 @@ namespace Tasklog.Api.Services
             if (first != null)
             {
                 sb.AppendLine($"mood: {Inline(first.Words)}{(last != null ? $" -> {Inline(last.Words)}" : "")}");
-                sb.AppendLine($"energy: {first.Energy}{(last != null ? $" -> {last.Energy}" : "")}");
+                sb.AppendLine($"energy: {(first.Energy is int fe ? fe.ToString() : "--")}{(last != null ? $" -> {(last.Energy is int le ? le.ToString() : "--")}" : "")}");
             }
             sb.AppendLine($"checkins: {checkins.Count}");
             sb.AppendLine("tags:");
@@ -118,7 +118,7 @@ namespace Tasklog.Api.Services
                 case "checkins":
                     if (checkins.Count == 0) { sb.AppendLine("- (none)"); break; }
                     foreach (var c in checkins)
-                        sb.AppendLine($"- {c.At:HH:mm} - {Inline(c.Words)} - energy {c.Energy}{(c.MocLevel is int m ? $" - MoC {m}" : "")}");
+                        sb.AppendLine($"- {c.At:HH:mm} - {Inline(c.Words)}{(c.Energy is int ce ? $" - energy {ce}" : "")}{(c.MocLevel is int m ? $" - MoC {m}" : "")}");
                     break;
 
                 case "prose":
@@ -233,7 +233,7 @@ namespace Tasklog.Api.Services
                 sb.AppendLine();
             }
 
-            sb.AppendLine($"**Energy at end of day:** {(last != null ? last.Energy.ToString() : "--")}");
+            sb.AppendLine($"**Energy at end of day:** {(last?.Energy is int ee ? ee.ToString() : "--")}");
         }
 
         private static void AppendBlockquote(StringBuilder sb, string? text)

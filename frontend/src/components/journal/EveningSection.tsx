@@ -13,14 +13,31 @@ interface Props {
   value: EveningContent;
   checkins: MoodCheckinDto[];
   onChange: (value: EveningContent) => void;
+  // v4.1 (#92, pin 16): the ceremony opens with the ledger's answer, not a
+  // question - What Moved argues with despair using facts; What Came Back is
+  // the honest boost line. Both derived by the page; empty strings hide them.
+  movedLine?: string;
+  cameBackLine?: string;
 }
 
-export default function EveningSection({ title, value, checkins, onChange }: Props) {
+export default function EveningSection({ title, value, checkins, onChange, movedLine, cameBackLine }: Props) {
   const shift = moodShift(checkins);
   const eod = energyEod(checkins);
 
   return (
     <SectionCard title={title} marked>
+      {movedLine && (
+        <p className="mb-2 rounded-lg border border-j-accent/40 bg-j-accent-soft/40 px-3 py-2 text-sm text-j-ink">
+          <b className="font-semibold">What moved:</b> {movedLine}{" "}
+          <span className="font-mono text-[0.6rem] text-j-muted">auto</span>
+        </p>
+      )}
+      {cameBackLine && (
+        <p className="mb-3 rounded-lg border border-j-line bg-j-card px-3 py-2 text-sm text-j-ink">
+          <b className="font-semibold">What came back:</b> {cameBackLine}{" "}
+          <span className="font-mono text-[0.6rem] text-j-muted">auto</span>
+        </p>
+      )}
       <dl>
         <Row label="Emotion shift">
           <span className="text-sm text-j-muted">

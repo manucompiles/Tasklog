@@ -141,23 +141,48 @@ async function appendMessages(
   }
 }
 
-// Card outcomes, injected per turn: Sage proposes cards but is never told what
-// the user did with them - found when it could not answer "is the procureflow
-// task created?". This closes that loop (and stops it re-raising kept things).
+// Write outcomes, injected per turn: Sage writes autonomously but is never told
+// what later happened to a write (an undo, a toss). This closes that loop. v4.1
+// (review R6): every log_* call leaves a capture, so the labels are per-type now -
+// the old task-only wording called a mood check-in `"undefined": KEPT (task created)`.
+type CaptureRow = {
+  id: number;
+  type: string;
+  status: string;
+  payload: Record<string, unknown>;
+};
+
+function captureLabel(c: CaptureRow): string {
+  const p = c.payload;
+  const s = (v: unknown, max = 40) => (typeof v === "string" ? v.slice(0, max) : "");
+  switch (c.type) {
+    case "task":
+      return `task "${s(p.title)}"`;
+    case "mood":
+      return `mood [${Array.isArray(p.words) ? p.words.slice(0, 3).join(", ") : ""}]`;
+    case "expense":
+      return `expense ${typeof p.amount === "number" ? p.amount : "?"} (${s(p.note)})`;
+    case "time":
+      return `time ${s(p.op, 10)}${s(p.description) ? ` "${s(p.description)}"` : ""}`;
+    case "thought":
+      return `thought "${s(p.text ?? p.body)}"`;
+    case "note":
+      return `journal weave`;
+    default:
+      return c.type;
+  }
+}
+
 async function cardContext(sessionId: number): Promise<string> {
   try {
     const res = await fetch(`${API}/api/captures?sessionId=${sessionId}`);
     if (!res.ok) return "";
-    const captures = (await res.json()) as Array<{
-      id: number;
-      status: string;
-      payload: { title?: string };
-    }>;
+    const captures = (await res.json()) as CaptureRow[];
     if (captures.length === 0) return "";
     const label = (s: string) =>
-      s === "confirmed" ? "KEPT (task created)" : s === "dismissed" ? "TOSSED by the user" : "still pending";
-    const lines = captures.map((c) => `- card #${c.id} "${c.payload.title}": ${label(c.status)}`);
-    return `\n\n## Your proposal cards this session (live status)\n${lines.join("\n")}\nIf they say a toss was an accident, point them at the Restore button on that card - you cannot restore it yourself.\n`;
+      s === "confirmed" ? "logged" : s === "dismissed" ? "UNDONE/tossed by the user" : "still pending (card)";
+    const lines = captures.map((c) => `- #${c.id} ${captureLabel(c)}: ${label(c.status)}`);
+    return `\n\n## Your writes this session (live status)\n${lines.join("\n")}\nA line marked UNDONE means the user reversed it - do not silently redo it. If they say a toss was an accident, point them at the Restore button on that card - you cannot restore it yourself.\n`;
   } catch {
     return "";
   }
@@ -184,13 +209,84 @@ async function projectContext(): Promise<string> {
   }
 }
 
-// The two in-process tools Sage can call (P87 Step 3). Both are thin wrappers
-// over the .NET API - the system of record stays on the backend.
+// Today's live ledger, compact (#92 Step 4): what the morning brief and the
+// evening's What Moved narrate from. Defaults to no-op on any fetch failure -
+// a missing summary degrades the conduct, never the turn.
+async function todayContext(): Promise<string> {
+  try {
+    const [entriesRes, activeRes] = await Promise.all([
+      fetch(`${API}/api/time-entries`),
+      fetch(`${API}/api/time-entries/active`),
+    ]);
+    if (!entriesRes.ok) return "";
+    const entries = (await entriesRes.json()) as Array<{
+      id: number; taskTitle?: string; description?: string;
+      startedAt: string; endedAt?: string | null; durationSeconds: number;
+    }>;
+    const active = activeRes.ok ? await activeRes.json().catch(() => null) : null;
+    if (entries.length === 0 && !active) return "";
+    const hm = (s: number) => `${Math.floor(s / 3600)}h${String(Math.round((s % 3600) / 60)).padStart(2, "0")}m`;
+    const lines = entries.map((e) =>
+      `- ${e.startedAt.slice(11, 16)}-${e.endedAt ? e.endedAt.slice(11, 16) : "now"} ${e.taskTitle || e.description || "(untitled)"} (${hm(e.durationSeconds)})`,
+    );
+    return `\n\n## Today's ledger so far (times are the record - narrate from these, never invent)\n${lines.join("\n")}\n`;
+  } catch {
+    return "";
+  }
+}
+
+// The worn knowledge layer (#92 Step 4): Sage's own distilled note sheet,
+// loaded into every conversation. Small by contract - one line per pattern.
+async function profileNotesContext(): Promise<string> {
+  try {
+    const res = await fetch(`${API}/api/profile-notes`);
+    if (!res.ok) return "";
+    const notes = (await res.json()) as Array<{ text: string; kind: string }>;
+    if (notes.length === 0) return "";
+    const lines = notes.map((n) => `- (${n.kind}) ${n.text}`);
+    return `\n\n## What you know about him (your own note sheet - correctable by him)\n${lines.join("\n")}\n`;
+  } catch {
+    return "";
+  }
+}
+
+// Sage's in-process tools (#92, plan D1): AUTONOMOUS writers. Each log_* tool
+// creates AND confirms a capture in one backend call (autoConfirm) - the entity
+// lands immediately, the capture row is the receipt, and the client renders a
+// receipt chip (event type "receipt") the user can open to edit/undo. There is
+// no propose/approve step anywhere anymore.
 function buildTools(sessionId: number): CompanionTool[] {
+  // Shared POST /api/captures?autoConfirm helper - one shape for every writer.
+  async function logCapture(
+    type: string,
+    payload: Record<string, unknown>,
+    span?: string,
+  ): Promise<{ result: Record<string, unknown>; event?: import("@/lib/companion/provider").CompanionTurnEvent }> {
+    const res = await fetch(`${API}/api/captures`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, payload, sessionId, span, source: "companion", autoConfirm: true }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      return { result: { logged: false, error: err } };
+    }
+    const data = (await res.json()) as { capture?: { id: number }; entity?: unknown; id?: number; status?: string };
+    // A deduped task echo returns the bare capture row (already handled once).
+    if (data.status === "dismissed")
+      return { result: { logged: false, note: "The user already dismissed this exact item. Do not raise it again." } };
+    if (!data.capture)
+      return { result: { logged: true, note: "Already existed - no duplicate was created." } };
+    return {
+      result: { logged: true, captureId: data.capture.id, entity: data.entity },
+      event: { type: "receipt", capture: data.capture, entity: data.entity },
+    };
+  }
+
   const findRelevantTasks: CompanionTool<{ query: z.ZodString }> = {
     name: "find_relevant_tasks",
     description:
-      "Semantic search over the user's OPEN tasks. Call this BEFORE proposing a task " +
+      "Semantic search over the user's OPEN tasks. Call this BEFORE logging a task " +
       "to check whether it already exists (paraphrases match: 'the tax thing' finds " +
       "'File ITR'). Returns top candidates with scores - judge them yourself.",
     schema: { query: z.string().min(1).describe("Short description of the task to look for") },
@@ -198,8 +294,6 @@ function buildTools(sessionId: number): CompanionTool[] {
       const res = await fetch(`${API}/api/search/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // 6 candidates (not the API's default 8): enough for the model to judge
-        // a match, small enough not to crowd the turn's context.
         body: JSON.stringify({ query: text, limit: 6 }),
       });
       if (!res.ok) return { result: { error: `search failed: ${res.status}` } };
@@ -207,142 +301,258 @@ function buildTools(sessionId: number): CompanionTool[] {
     },
   };
 
-  const proposeCapture: CompanionTool<{
+  const logTask: CompanionTool<{
     title: z.ZodString;
     projectId: z.ZodOptional<z.ZodNumber>;
     newProjectName: z.ZodOptional<z.ZodString>;
     deadline: z.ZodOptional<z.ZodString>;
     span: z.ZodOptional<z.ZodString>;
-    confidence: z.ZodOptional<z.ZodNumber>;
   }> = {
-    name: "propose_capture",
+    name: "log_task",
     description:
-      "Propose ONE actionable task you noticed in the conversation. Shows the user a " +
-      "card they can keep, edit, or toss - it does NOT create the task directly, and " +
-      "you must not assume it was accepted. Use find_relevant_tasks first to avoid " +
-      "proposing something that already exists.",
+      "Create ONE task the user asked for or clearly stated. It is created " +
+      "immediately (no approval card) and the user sees a small receipt they can " +
+      "edit or undo. Use find_relevant_tasks first to avoid duplicates.",
     schema: {
       title: z.string().min(1).describe("Crisp verb-first task title, e.g. 'File the ITR'"),
       projectId: z.number().int().positive().optional()
         .describe("Best-guess project id from the current-projects list; omit if unsure"),
       newProjectName: z.string().min(1).optional()
-        .describe(
-          "ONLY when the user explicitly asked for (or agreed to) a NEW project for this. " +
-          "Never invent projects on your own - default to no project (Inbox).",
-        ),
+        .describe("ONLY when the user explicitly asked for a NEW project. Never invent projects."),
       deadline: z.string().optional()
         .describe("ISO date (yyyy-MM-dd) only when the user stated or clearly implied one"),
-      span: z.string().optional()
-        .describe("The user's exact words that triggered this proposal (short quote)"),
-      confidence: z.number().min(0).max(1).optional()
-        .describe("How sure you are this is a real, new actionable"),
+      span: z.string().optional().describe("The user's exact words (short quote)"),
     },
-    handler: async ({ title, projectId, newProjectName, deadline, span, confidence }) => {
-      const res = await fetch(`${API}/api/captures`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "task",
-          payload: {
-            title,
-            ...(projectId ? { projectId } : {}),
-            ...(newProjectName ? { newProjectName } : {}),
-            ...(deadline ? { deadline } : {}),
-          },
-          sessionId,
-          span,
-          confidence,
-          source: "companion",
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        return { result: { proposed: false, error: err } };
-      }
-      const capture = (await res.json()) as { id: number; status: string };
-      // Dedupe echo (the API returns the existing row for a repeat title): a
-      // previously DISMISSED item must not resurface as a new card.
-      if (capture.status === "dismissed") {
-        return {
-          result: {
-            proposed: false,
-            note: "The user already dismissed this exact proposal. Do not raise it again.",
-          },
-        };
-      }
-      if (capture.status === "confirmed") {
-        return {
-          result: { proposed: false, note: "Already confirmed earlier - it is on their list." },
-        };
-      }
-      return {
-        result: {
-          proposed: true,
-          captureId: capture.id,
-          note: "Card shown to the user. Do not assume it was accepted.",
-        },
-        event: { type: "card", capture },
-      };
+    handler: async ({ title, projectId, newProjectName, deadline, span }) =>
+      logCapture("task", {
+        title,
+        ...(projectId ? { projectId } : {}),
+        ...(newProjectName ? { newProjectName } : {}),
+        ...(deadline ? { deadline } : {}),
+      }, span),
+  };
+
+  const logMood: CompanionTool<{
+    words: z.ZodArray<z.ZodString>;
+    energy: z.ZodOptional<z.ZodNumber>;
+    checkinAt: z.ZodOptional<z.ZodString>;
+    span: z.ZodOptional<z.ZodString>;
+  }> = {
+    name: "log_mood",
+    description:
+      "Record a mood check-in when the user names a feeling ('now i feel guilty', " +
+      "'feels good to connect'). Their own words, never your labels. Energy only " +
+      "if they said a number - never guess one.",
+    schema: {
+      words: z.array(z.string().min(1)).min(1).describe("The user's own feeling words"),
+      energy: z.number().int().min(0).max(10).optional()
+        .describe("ONLY when the user stated a number"),
+      checkinAt: z.string().optional().describe("ISO datetime when it was felt, if retro"),
+      span: z.string().optional().describe("The user's exact words (short quote)"),
+    },
+    handler: async ({ words, energy, checkinAt, span }) =>
+      logCapture("mood", {
+        words,
+        ...(energy !== undefined ? { energy } : {}),
+        ...(checkinAt ? { checkinAt } : {}),
+      }, span),
+  };
+
+  const logThought: CompanionTool<{
+    title: z.ZodString;
+    bodyMd: z.ZodOptional<z.ZodString>;
+    kind: z.ZodEnum<{ memory: "memory"; idea: "idea"; reflection: "reflection"; quote: "quote"; wish: "wish"; note: "note" }>;
+    about: z.ZodOptional<z.ZodArray<z.ZodAny>>;
+    source: z.ZodOptional<z.ZodString>;
+    span: z.ZodOptional<z.ZodString>;
+  }> = {
+    name: "log_thought",
+    description:
+      "Save a thought as its typed note: memory (notable, worth never losing), idea, " +
+      "reflection (carries a source), quote, or wish (the someday shelf). Title is the " +
+      "link phrase; bodyMd is the CLEANED version in the user's voice - keep their tone " +
+      "('lol', deadpan), fix only dictation garble. The verbatim stays on the receipt.",
+    schema: {
+      title: z.string().min(1).describe("Short link phrase, e.g. 'Nov 2 marks six years at the job'"),
+      bodyMd: z.string().optional().describe("Cleaned markdown body, the user's voice intact"),
+      kind: z.enum(["memory", "idea", "reflection", "quote", "wish", "note"]),
+      // z.any over z.record: zod v4 record schemas break the SDK's converter
+      // and silently drop the WHOLE tool batch (#92 bisect). Backend validates.
+      about: z.array(z.any()).optional()
+        .describe('About-links, e.g. [{"type":"project","id":2},{"type":"person","name":"Deepika"}]'),
+      source: z.string().optional().describe("For reflections/quotes: the book, URL, or person"),
+      span: z.string().optional().describe("The user's exact words (short quote)"),
+    },
+    handler: async ({ title, bodyMd, kind, about, source, span }) =>
+      logCapture("thought", {
+        title,
+        kind,
+        ...(bodyMd ? { bodyMd } : {}),
+        ...(about ? { about } : {}),
+        ...(source ? { source } : {}),
+      }, span),
+  };
+
+  const logExpense: CompanionTool<{
+    amount: z.ZodNumber;
+    note: z.ZodString;
+    direction: z.ZodOptional<z.ZodEnum<{ out: "out"; in: "in" }>>;
+    occurredOn: z.ZodOptional<z.ZodString>;
+    split: z.ZodOptional<z.ZodAny>;
+    projectId: z.ZodOptional<z.ZodNumber>;
+    span: z.ZodOptional<z.ZodString>;
+  }> = {
+    name: "log_expense",
+    description:
+      "Record money that moved. Day-matched: use the day the money moved, not today " +
+      "('tickets on the 4th' -> occurredOn that date). Splits are first-class: who " +
+      "owes what, settled later.",
+    schema: {
+      amount: z.number().positive().describe("Positive amount; direction signs it"),
+      note: z.string().min(1).describe("What it was, in the user's words"),
+      direction: z.enum(["out", "in"]).optional().describe("Default out (spent)"),
+      occurredOn: z.string().optional().describe("ISO date the money moved; default today"),
+      split: z.any().optional()
+        .describe('Split object, e.g. {"with":"Manish","share":1290,"settled":false}'),
+      projectId: z.number().int().positive().optional().describe("The trip/project it belongs to"),
+      span: z.string().optional().describe("The user's exact words (short quote)"),
+    },
+    handler: async ({ amount, note, direction, occurredOn, split, projectId, span }) =>
+      logCapture("expense", {
+        amount,
+        note,
+        ...(direction ? { direction } : {}),
+        ...(occurredOn ? { occurredOn } : {}),
+        ...(split ? { split } : {}),
+        ...(projectId ? { projectId } : {}),
+      }, span),
+  };
+
+  const logTime: CompanionTool<{
+    op: z.ZodEnum<{ start: "start"; stop: "stop"; manual: "manual"; edit: "edit" }>;
+    taskId: z.ZodOptional<z.ZodNumber>;
+    description: z.ZodOptional<z.ZodString>;
+    startedAt: z.ZodOptional<z.ZodString>;
+    endedAt: z.ZodOptional<z.ZodString>;
+    entryId: z.ZodOptional<z.ZodNumber>;
+    span: z.ZodOptional<z.ZodString>;
+  }> = {
+    name: "log_time",
+    description:
+      "The timer follows the user's narration. start (auto-stops the running timer), " +
+      "stop, manual (a closed retro interval: 'that idle time was brunch'), edit " +
+      "(fix an entry: 'ended rise and shine 10 mins ago'). Times are local ISO.",
+    schema: {
+      op: z.enum(["start", "stop", "manual", "edit"]),
+      taskId: z.number().int().positive().optional().describe("Task to attach, when named"),
+      description: z.string().optional().describe("Label for taskless entries, emoji style welcome"),
+      startedAt: z.string().optional().describe("Local ISO datetime; op=start may backdate"),
+      endedAt: z.string().optional().describe("Local ISO datetime"),
+      entryId: z.number().int().positive().optional().describe("For op=edit/stop on a known entry"),
+      span: z.string().optional().describe("The user's exact words (short quote)"),
+    },
+    handler: async ({ op, taskId, description, startedAt, endedAt, entryId, span }) =>
+      logCapture("time", {
+        op,
+        ...(taskId ? { taskId } : {}),
+        ...(description ? { description } : {}),
+        ...(startedAt ? { startedAt } : {}),
+        ...(endedAt ? { endedAt } : {}),
+        ...(entryId ? { entryId } : {}),
+      }, span),
+  };
+
+  const weaveJournal: CompanionTool<{
+    date: z.ZodOptional<z.ZodString>;
+    sections: z.ZodAny;
+    span: z.ZodOptional<z.ZodString>;
+  }> = {
+    name: "weave_journal",
+    description:
+      "Merge content into the day's journal sections (server-side merge - never " +
+      "clobbers what is already there). prose sections append; front/back_of_mind " +
+      "append items {text, cleared:false}; todays_plan replaces {buckets}. Write " +
+      "cleaned prose in the user's voice. Never write the checkins section.",
+    schema: {
+      date: z.string().optional().describe("ISO date; default today"),
+      sections: z.any()
+        .describe('REQUIRED object keyed by section, e.g. {"mind_dump":"...", "front_of_mind":[{"text":"...","cleared":false}]}'),
+      span: z.string().optional().describe("The user's exact words (short quote)"),
+    },
+    handler: async ({ date, sections, span }) =>
+      logCapture("note", { ...(date ? { date } : {}), sections }, span),
+  };
+
+  const checkScreen: CompanionTool<{
+    from: z.ZodString;
+    to: z.ZodOptional<z.ZodString>;
+    machine: z.ZodOptional<z.ZodString>;
+  }> = {
+    name: "check_screen",
+    description:
+      "THE TAPE: what the user's screen actually showed (active window titles + " +
+      "idle stretches) between two times. ALWAYS call this before backdating or " +
+      "setting any retro time boundary - idle onset is when they left the desk, " +
+      "never guess from message timing. Empty = machine off or watchman down.",
+    schema: {
+      from: z.string().describe("Local ISO datetime, e.g. 2026-09-12T20:00"),
+      to: z.string().optional().describe("Local ISO datetime; default now"),
+      machine: z.string().optional().describe("Default pc"),
+    },
+    handler: async ({ from, to, machine }) => {
+      const params = new URLSearchParams({ from, ...(to ? { to } : {}), machine: machine ?? "pc" });
+      const res = await fetch(`${API}/api/activity/segments?${params}`);
+      if (!res.ok) return { result: { error: `tape unavailable: ${res.status}` } };
+      return { result: await res.json() };
     },
   };
 
-  const updateCapture: CompanionTool<{
-    captureId: z.ZodNumber;
-    title: z.ZodString;
-    projectId: z.ZodOptional<z.ZodNumber>;
-    newProjectName: z.ZodOptional<z.ZodString>;
-    deadline: z.ZodOptional<z.ZodString>;
-  }> = {
-    name: "update_capture",
+  const undoCapture: CompanionTool<{ captureId: z.ZodNumber }> = {
+    name: "undo_capture",
     description:
-      "Update ONE of your still-proposed cards when the user asks to change it " +
-      "(different project, a new project, reworded title, deadline). Send the card's " +
-      "FULL corrected content - it replaces what was there. Kept or tossed cards " +
-      "cannot be changed. Never use this to re-open something the user tossed.",
-    schema: {
-      captureId: z.number().int().positive().describe("The id of the card you proposed earlier"),
-      title: z.string().min(1).describe("The full task title (restate it, edited or not)"),
-      projectId: z.number().int().positive().optional()
-        .describe("Existing project id, when the user wants it filed there"),
-      newProjectName: z.string().min(1).optional()
-        .describe("When the user asked for a NEW project for this task"),
-      deadline: z.string().optional().describe("ISO date (yyyy-MM-dd), when wanted"),
-    },
-    handler: async ({ captureId, title, projectId, newProjectName, deadline }) => {
-      const res = await fetch(`${API}/api/captures/${captureId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          // sessionId scopes the edit to THIS conversation (review R7): the
-          // model must not be able to rewrite another day's pending cards.
-          sessionId,
-          payload: {
-            title,
-            ...(projectId ? { projectId } : {}),
-            ...(newProjectName ? { newProjectName } : {}),
-            ...(deadline ? { deadline } : {}),
-          },
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        return { result: { updated: false, error: err } };
-      }
+      "Undo one of your own logged captures when the user corrects you ('no, that " +
+      "wasn't lunch'): deletes the entity it created and marks the receipt dismissed. " +
+      "Journal weaves cannot be undone wholesale - re-weave a correction instead.",
+    schema: { captureId: z.number().int().positive().describe("The receipt id you logged earlier") },
+    handler: async ({ captureId }) => {
+      const res = await fetch(`${API}/api/captures/${captureId}/dismiss`, { method: "POST" });
+      if (!res.ok) return { result: { undone: false, error: await res.text() } };
       const capture = (await res.json()) as { id: number };
-      return {
-        result: {
-          updated: true,
-          note: "Card updated on screen. The user still decides keep or toss.",
-        },
-        // The client upserts by id, so the card visibly morphs in place.
-        event: { type: "card", capture },
-      };
+      return { result: { undone: true }, event: { type: "receipt", capture } };
+    },
+  };
+
+  const writeProfileNote: CompanionTool<{
+    text: z.ZodString;
+    kind: z.ZodOptional<z.ZodEnum<{ routine: "routine"; preference: "preference"; lexicon: "lexicon"; fact: "fact" }>>;
+  }> = {
+    name: "write_profile_note",
+    description:
+      "Add ONE distilled line to your own note sheet about the user (loads into every " +
+      "future conversation). For durable patterns only - routines, preferences, their " +
+      "personal lexicon - never day-to-day events (those belong in the journal). The " +
+      "user sees and can remove every line.",
+    schema: {
+      text: z.string().min(1).max(400).describe("One line, e.g. 'Wakes 06:35-06:45 every day'"),
+      kind: z.enum(["routine", "preference", "lexicon", "fact"]).optional(),
+    },
+    handler: async ({ text, kind }) => {
+      const res = await fetch(`${API}/api/profile-notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, ...(kind ? { kind } : {}) }),
+      });
+      if (!res.ok) return { result: { saved: false, error: await res.text() } };
+      return { result: { saved: true } };
     },
   };
 
   // Erase the per-tool arg generics at this one boundary: the provider re-narrows
   // when the SDK hands back schema-validated args (see provider.ts).
-  return [findRelevantTasks, proposeCapture, updateCapture] as unknown as CompanionTool[];
+  return [
+    findRelevantTasks, logTask, logMood, logThought, logExpense, logTime,
+    weaveJournal, undoCapture, writeProfileNote, checkScreen,
+  ] as unknown as CompanionTool[];
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -418,10 +628,12 @@ export async function POST(request: Request): Promise<Response> {
   }
   runningSessions.add(session.id);
 
-  const [persona, projects, cards] = await Promise.all([
+  const [persona, projects, cards, profileNotes, today] = await Promise.all([
     readPersona(),
     projectContext(),
     cardContext(session.id),
+    profileNotesContext(),
+    todayContext(),
   ]);
   const provider = new ClaudeCodeProvider();
   const encoder = new TextEncoder();
@@ -459,7 +671,7 @@ export async function POST(request: Request): Promise<Response> {
           for await (const event of provider.runTurn({
             message: turnMessage,
             resumeSessionId,
-            systemPrompt: persona + projects + cards + nowContext(),
+            systemPrompt: persona + profileNotes + projects + cards + today + nowContext(),
             tools: buildTools(session.id),
           })) {
             if (event.type === "done") {

@@ -39,6 +39,22 @@ export interface Project {
   // Manual sidebar sort order (#86); lower = higher in the list.
   position: number;
   createdAt: string; // ISO 8601 datetime string
+  // v4.1 Stage B (#92): the project home fields. status: "active" | "onhold".
+  status: string;
+  areaId: number | null;
+  area: AreaDto | null;
+  about: string | null;
+  nowText: string | null;
+  // JSON array of { at, text } - NOW's archived chapters, newest last.
+  nowHistoryJson: string;
+}
+
+// An AREA (v4.1, pin 11): the broad domain the Projects sidebar groups by.
+export interface AreaDto {
+  id: number;
+  name: string;
+  why: string | null;
+  position: number;
 }
 
 // The shape returned by the API for every label.
@@ -694,7 +710,7 @@ export interface MoodCheckinDto {
   id: number;
   checkinAt: string; // local ISO datetime
   words: string[];
-  energy: number; // 0-10
+  energy: number | null; // 0-10; null when the words came without a number (v4.1)
   mocLevel: number | null;
 }
 
@@ -825,14 +841,29 @@ export interface CompanionSessionDto {
   updatedAt: string;
 }
 
-// A staged proposal in the Capture inbox. v4.0 payloads are task-shaped.
+// A row in the Capture inbox. v4.0 staged proposals; v4.1 (#92) rows are mostly
+// RECEIPTS - Sage writes autonomously and the row is the audit/undo record.
+// Payload shape depends on type (task/mood/thought/note/expense/time).
 export interface CaptureDto {
   id: number;
-  type: string; // "task" in v4.0
+  type: string;
   status: "proposed" | "confirmed" | "dismissed";
   source: string;
   sessionId: number | null;
-  payload: { title?: string; projectId?: number; newProjectName?: string; deadline?: string };
+  payload: {
+    title?: string; projectId?: number; newProjectName?: string; deadline?: string;
+    // mood
+    words?: string[]; energy?: number;
+    // thought
+    kind?: string; bodyMd?: string; source?: string;
+    // expense
+    amount?: number; direction?: string; note?: string; occurredOn?: string;
+    split?: { with?: string; share?: number; settled?: boolean };
+    // time
+    op?: string; description?: string; startedAt?: string; endedAt?: string;
+    // weave
+    date?: string; sections?: Record<string, unknown>;
+  };
   span: string | null;
   confidence: number | null;
   confirmedType: string | null;
@@ -923,5 +954,216 @@ export async function restoreCapture(id: number): Promise<CaptureDto> {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? "Failed to restore the card.");
   }
+  return res.json();
+}
+
+// ---------- Expenses (v4.1, #92) ----------
+
+// A money row (plan D4): day-matched into the journal, rolled up per project.
+export interface ExpenseDto {
+  id: number;
+  amount: number;
+  direction: "out" | "in";
+  occurredOn: string;
+  note: string;
+  splitJson: string; // "{}" when unshared; { with, share, settled } otherwise
+  projectId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// GET /api/expenses?from=&to= - one day's rows when from === to.
+export async function getExpenses(from: string, to: string): Promise<ExpenseDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/expenses?from=${from}&to=${to}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load expenses.");
+  return res.json();
+}
+
+// ---------- Notes (v4.1, #92) ----------
+
+// The markdown entity behind memories/ideas/reflections/quotes/wishes (plan D3).
+export interface NoteDto {
+  id: number;
+  title: string;
+  bodyMd: string;
+  kind: string;
+  aboutJson: string;
+  source: string | null;
+  originDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// GET /api/notes?date= - the day's notes (the mind dump's destiny list).
+export async function getNotesForDay(date: string): Promise<NoteDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/notes?date=${date}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load notes.");
+  return res.json();
+}
+
+// ---------- Areas + Goals (v4.1 Stage B, #92) ----------
+
+export async function getAreas(): Promise<AreaDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/areas`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load areas.");
+  return res.json();
+}
+
+export async function updateArea(id: number, patch: { name?: string; why?: string }): Promise<AreaDto> {
+  const res = await fetch(`${getApiUrl()}/api/areas/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update the area.");
+  return res.json();
+}
+
+// The locked goal entity (design-principles-v4.md): per-project, one-line birth.
+export interface GoalDto {
+  id: number;
+  projectId: number;
+  title: string;
+  why: string | null;
+  timespan: string | null;
+  targetDate: string | null;
+  progress: number;
+  expectationsJson: string; // dated history, newest last
+  door: string | null;
+  status: string; // active | done | parked
+}
+
+export async function getGoals(projectId: number): Promise<GoalDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/goals?projectId=${projectId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load goals.");
+  return res.json();
+}
+
+export async function createGoal(projectId: number, title: string): Promise<GoalDto> {
+  const res = await fetch(`${getApiUrl()}/api/goals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId, title }),
+  });
+  if (!res.ok) throw new Error("Failed to create the goal.");
+  return res.json();
+}
+
+export async function updateGoal(id: number, patch: Partial<{
+  title: string; why: string; timespan: string; targetDate: string;
+  expectation: string; door: string; progress: number; status: string;
+}>): Promise<GoalDto> {
+  const res = await fetch(`${getApiUrl()}/api/goals/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update the goal.");
+  return res.json();
+}
+
+// Create a project from the composer (pin 12): area/client by id or created-on-type.
+export async function createProjectFull(input: {
+  name: string; clientId?: number; areaId?: number; newAreaName?: string;
+}): Promise<Project> {
+  const res = await fetch(`${getApiUrl()}/api/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("Failed to create the project.");
+  return res.json();
+}
+
+export async function updateProjectHome(id: number, patch: {
+  status?: string; areaId?: number | null; about?: string; now?: string;
+}): Promise<Project> {
+  const res = await fetch(`${getApiUrl()}/api/projects/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update the project.");
+  return res.json();
+}
+
+export async function getExpensesForProject(projectId: number): Promise<ExpenseDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/expenses?projectId=${projectId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load expenses.");
+  return res.json();
+}
+
+// ---------- Persons + Profile (v4.1 Stage B, #92) ----------
+
+// A person (pin 17): deep entity, born from a mention, everything correctable.
+export interface PersonDto {
+  id: number;
+  name: string;
+  relation: string | null;
+  whoTheyAre: string | null;
+  rhythmDays: number | null;
+  lastContactAt: string | null;
+  birthday: string | null;
+  threadsJson: string; // JSON string[]
+  nextTime: string | null;
+}
+
+export async function getPersons(): Promise<PersonDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/persons`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load people.");
+  return res.json();
+}
+
+export async function updatePerson(id: number, patch: Partial<{
+  name: string; relation: string; whoTheyAre: string; rhythmDays: number;
+  lastContactAt: string; birthday: string; nextTime: string; threads: string[];
+}>): Promise<PersonDto> {
+  const res = await fetch(`${getApiUrl()}/api/persons/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update the person.");
+  return res.json();
+}
+
+export async function createPerson(name: string, relation?: string): Promise<PersonDto> {
+  const res = await fetch(`${getApiUrl()}/api/persons`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, ...(relation ? { relation } : {}) }),
+  });
+  if (!res.ok) throw new Error("Failed to create the person.");
+  return res.json();
+}
+
+// Sage's worn note sheet (What Sage Knows) - the transparency contract.
+export interface ProfileNoteDto {
+  id: number;
+  text: string;
+  kind: string;
+  sourceDate: string;
+  active: boolean;
+}
+
+export async function getProfileNotes(): Promise<ProfileNoteDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/profile-notes`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load the note sheet.");
+  return res.json();
+}
+
+export async function retireProfileNote(id: number): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/api/profile-notes/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ active: false }),
+  });
+  if (!res.ok) throw new Error("Failed to retire the line.");
+}
+
+// Typed note views (memories, wishes...) for the Profile tab.
+export async function getNotesByKind(kind: string): Promise<NoteDto[]> {
+  const res = await fetch(`${getApiUrl()}/api/notes?kind=${kind}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load notes.");
   return res.json();
 }

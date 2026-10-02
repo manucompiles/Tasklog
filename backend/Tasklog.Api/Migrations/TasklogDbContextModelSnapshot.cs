@@ -32,6 +32,65 @@ namespace Tasklog.Api.Migrations
                     b.ToTable("LabelTaskModel");
                 });
 
+            modelBuilder.Entity("Tasklog.Api.Models.ActivitySample", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("IdleS")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Machine")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Ts")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Win")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Machine", "Ts")
+                        .IsUnique();
+
+                    b.ToTable("ActivitySamples");
+                });
+
+            modelBuilder.Entity("Tasklog.Api.Models.Area", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Why")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Areas");
+                });
+
             modelBuilder.Entity("Tasklog.Api.Models.Capture", b =>
                 {
                     b.Property<int>("Id")
@@ -190,6 +249,97 @@ namespace Tasklog.Api.Migrations
                     b.ToTable("Embeddings");
                 });
 
+            modelBuilder.Entity("Tasklog.Api.Models.Expense", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("Amount")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OccurredOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ProjectId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SplitJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredOn");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("Expenses");
+                });
+
+            modelBuilder.Entity("Tasklog.Api.Models.Goal", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Door")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExpectationsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Progress")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("TargetDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Timespan")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Why")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("Goals");
+                });
+
             modelBuilder.Entity("Tasklog.Api.Models.JournalEntry", b =>
                 {
                     b.Property<int>("Id")
@@ -289,7 +439,7 @@ namespace Tasklog.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Energy")
+                    b.Property<int?>("Energy")
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("MocLevel")
@@ -306,10 +456,135 @@ namespace Tasklog.Api.Migrations
                     b.ToTable("MoodCheckins");
                 });
 
+            modelBuilder.Entity("Tasklog.Api.Models.Note", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AboutJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BodyMd")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("OriginDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind");
+
+                    b.HasIndex("OriginDate");
+
+                    b.ToTable("Notes");
+                });
+
+            modelBuilder.Entity("Tasklog.Api.Models.Person", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("Birthday")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastContactAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NextTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Relation")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RhythmDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ThreadsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WhoTheyAre")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Persons");
+                });
+
+            modelBuilder.Entity("Tasklog.Api.Models.ProfileNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SourceDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Active");
+
+                    b.ToTable("ProfileNotes");
+                });
+
             modelBuilder.Entity("Tasklog.Api.Models.Project", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("About")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("AreaId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("ClientId")
@@ -325,10 +600,25 @@ namespace Tasklog.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("NowHistoryJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NowText")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Position")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("active");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
 
                     b.HasIndex("ClientId");
 
@@ -513,6 +803,27 @@ namespace Tasklog.Api.Migrations
                     b.Navigation("Task");
                 });
 
+            modelBuilder.Entity("Tasklog.Api.Models.Expense", b =>
+                {
+                    b.HasOne("Tasklog.Api.Models.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("Tasklog.Api.Models.Goal", b =>
+                {
+                    b.HasOne("Tasklog.Api.Models.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+                });
+
             modelBuilder.Entity("Tasklog.Api.Models.JournalEntry", b =>
                 {
                     b.HasOne("Tasklog.Api.Models.JournalTemplate", "Template")
@@ -526,10 +837,17 @@ namespace Tasklog.Api.Migrations
 
             modelBuilder.Entity("Tasklog.Api.Models.Project", b =>
                 {
+                    b.HasOne("Tasklog.Api.Models.Area", "Area")
+                        .WithMany("Projects")
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Tasklog.Api.Models.Client", "Client")
                         .WithMany("Projects")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Area");
 
                     b.Navigation("Client");
                 });
@@ -580,6 +898,11 @@ namespace Tasklog.Api.Migrations
                     b.Navigation("Project");
 
                     b.Navigation("Task");
+                });
+
+            modelBuilder.Entity("Tasklog.Api.Models.Area", b =>
+                {
+                    b.Navigation("Projects");
                 });
 
             modelBuilder.Entity("Tasklog.Api.Models.Client", b =>

@@ -45,7 +45,7 @@ export default function CheckinsSection({
                 </span>
               ))}
               <span className="rounded-full border border-j-line px-2.5 py-0.5 text-[0.8rem] text-j-muted">
-                energy {c.energy}
+                energy {c.energy ?? "-"}
               </span>
               {c.mocLevel !== null && (
                 <span className="rounded-full border border-j-line px-2.5 py-0.5 text-[0.8rem] text-j-muted">

@@ -21,6 +21,13 @@ namespace Tasklog.Api.Data
         public DbSet<CompanionSession> CompanionSessions => Set<CompanionSession>();
         public DbSet<Capture> Captures => Set<Capture>();
         public DbSet<Embedding> Embeddings => Set<Embedding>();
+        public DbSet<Note> Notes => Set<Note>();
+        public DbSet<Expense> Expenses => Set<Expense>();
+        public DbSet<ProfileNote> ProfileNotes => Set<ProfileNote>();
+        public DbSet<Area> Areas => Set<Area>();
+        public DbSet<Goal> Goals => Set<Goal>();
+        public DbSet<Person> Persons => Set<Person>();
+        public DbSet<ActivitySample> ActivitySamples => Set<ActivitySample>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -132,6 +139,50 @@ namespace Tasklog.Api.Data
                 .OnDelete(DeleteBehavior.SetNull);
             modelBuilder.Entity<Capture>().HasIndex(c => c.SessionId);
             modelBuilder.Entity<Capture>().HasIndex(c => c.Status);
+
+            // Notes (v4.1): the markdown entity of the type system. Kind is filtered on
+            // every typed view (memories, wishes...); OriginDate joins a note to its
+            // journal day.
+            modelBuilder.Entity<Note>().HasIndex(n => n.Kind);
+            modelBuilder.Entity<Note>().HasIndex(n => n.OriginDate);
+
+            // Expenses (v4.1): day-matched into the journal (OccurredOn scan) and rolled
+            // up per project. Deleting a project keeps its money history (the #86
+            // keep-history rule) - the FK just goes null.
+            modelBuilder.Entity<Expense>()
+                .HasOne(x => x.Project)
+                .WithMany()
+                .HasForeignKey(x => x.ProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<Expense>().HasIndex(x => x.OccurredOn);
+            modelBuilder.Entity<Expense>().HasIndex(x => x.ProjectId);
+
+            // Areas (v4.1 Stage B, pin 11): the sidebar's grouping domain. Deleting an
+            // area ungroups its projects (SET NULL) - never deletes them.
+            modelBuilder.Entity<Project>()
+                .HasOne(p => p.Area)
+                .WithMany(a => a.Projects)
+                .HasForeignKey(p => p.AreaId)
+                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<Project>().HasIndex(p => p.AreaId);
+            modelBuilder.Entity<Project>().Property(p => p.Status).HasDefaultValue("active");
+
+            // Goals cascade with their project (a goal has no life without its home).
+            modelBuilder.Entity<Goal>()
+                .HasOne(g => g.Project)
+                .WithMany()
+                .HasForeignKey(g => g.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Goal>().HasIndex(g => g.ProjectId);
+
+            // Activity samples (the tape): (Machine, Ts) unique makes shipping
+            // idempotent - a re-sent batch can never duplicate; Ts is the range-scan key.
+            modelBuilder.Entity<ActivitySample>()
+                .HasIndex(a => new { a.Machine, a.Ts })
+                .IsUnique();
+
+            // Profile notes: the active set loads into every Sage conversation.
+            modelBuilder.Entity<ProfileNote>().HasIndex(n => n.Active);
 
             // Embeddings (#87): one vector per entity per model. The unique composite key
             // makes embed-on-write an upsert, and a model swap writes new rows instead of

@@ -179,6 +179,31 @@ namespace Tasklog.Api.Controllers
             if (request.EndedAt > DateTime.Now.AddMinutes(5))
                 return BadRequest(new { message = "End time cannot be more than 5 minutes in the future." });
 
+            // A retro interval trims any running timer it overlaps (#92): inserting
+            // "sleep 00:50-06:00" while a dinner timer is still open must stop that
+            // timer at 00:50, not leave it running through the night. A running timer
+            // that started INSIDE the interval is pushed to start where the interval
+            // ends instead (review R3) - the narrated block owns that span; slivers
+            // under 2.5 min left of a trim are discarded, same rule as a normal stop.
+            var running = await _context.TimeEntries
+                .Where(e => e.EndedAt == null)
+                .ToListAsync();
+            foreach (var r in running)
+            {
+                if (r.StartedAt >= request.EndedAt) continue;
+                if (r.StartedAt < request.StartedAt)
+                {
+                    if ((request.StartedAt - r.StartedAt).TotalMinutes < 2.5)
+                        _context.TimeEntries.Remove(r);
+                    else
+                        r.EndedAt = request.StartedAt;
+                }
+                else
+                {
+                    r.StartedAt = request.EndedAt;
+                }
+            }
+
             var entry = new TimeEntry
             {
                 TaskId = task?.Id,

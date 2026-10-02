@@ -15,8 +15,10 @@ namespace Tasklog.Api.Models
         // picks are stored the same way). Plain TEXT + System.Text.Json.
         public string WordsJson { get; set; } = "[]";
 
-        // Energy 0-10 at that moment.
-        public int Energy { get; set; }
+        // Energy 0-10 at that moment. Nullable since v4.1: spoken check-ins carry
+        // words, rarely numbers ("now i feel gulty" has no energy figure) - forcing
+        // one blocked natural capture (dogfood finding, 11 Sep).
+        public int? Energy { get; set; }
 
         // Map of Consciousness level, derived by the client from the selected feelings
         // (never self-tagged). Null when the user logged only free words with no wheel picks.

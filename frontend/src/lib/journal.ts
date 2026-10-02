@@ -41,6 +41,11 @@ export function emptyPlan(): PlanContent {
 export interface MindItem {
   text: string;
   cleared: boolean;
+  // v4.1 (#92, plan D7): how the item was closed at the evening ceremony -
+  // "closed" (done), "letgo" (consciously released, renders struck), or
+  // "rolled" (still open, marked for tomorrow; the existing rollover
+  // derivation carries it forward). Absent on plain adds/clears.
+  verdict?: "closed" | "letgo" | "rolled";
 }
 
 // Evening review's typed fields (emotion shift + energy EOD are derived, never stored).
